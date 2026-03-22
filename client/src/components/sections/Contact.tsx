@@ -5,7 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import {
   Mail, Phone, MapPin, Github, Linkedin,
-  Send, CheckCircle2, AlertCircle
+  Send, CheckCircle2, AlertCircle, Clock, Globe, Briefcase
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { fadeInLeft, fadeInRight, fadeInUp } from '../../lib/animations';
@@ -201,11 +201,11 @@ const Contact = () => {
                 </span>
               </div>
               <div className="grid grid-cols-2 gap-2 font-mono text-xs text-[#8892A4]">
-                <span>⏱ Response time</span>
+                <span className="flex items-center gap-1.5"><Clock size={11} /> Response time</span>
                 <span className="text-[#0A0A0F] font-medium">~ 24 hrs</span>
-                <span>🌍 Timezone</span>
+                <span className="flex items-center gap-1.5"><Globe size={11} /> Timezone</span>
                 <span className="text-[#0A0A0F] font-medium">EAT (UTC +3)</span>
-                <span>💼 Open to</span>
+                <span className="flex items-center gap-1.5"><Briefcase size={11} /> Open to</span>
                 <span className="text-[#0A0A0F] font-medium">Remote / Hybrid</span>
               </div>
             </motion.div>

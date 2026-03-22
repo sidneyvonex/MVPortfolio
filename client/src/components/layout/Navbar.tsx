@@ -1,7 +1,10 @@
 import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X, Download, Terminal } from 'lucide-react';
 import { useActiveSection, sections } from '../../hooks/useActiveSection';
+import { api } from '../../services/api';
+import type { SettingsMap } from '../../services/adminApi';
 
 // Only show a subset in the top nav (not hero)
 const navLinks = sections.filter(s => s.id !== 'hero');
@@ -10,6 +13,13 @@ const Navbar = () => {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const { activeSection, scrollToSection } = useActiveSection();
+
+  const { data: settings } = useQuery<SettingsMap>({
+    queryKey: ['settings'],
+    queryFn: () => api.settings.get() as Promise<SettingsMap>,
+  });
+  const BASE_URL = import.meta.env.VITE_API_URL || '/api';
+  const resumeUrl = settings?.resumeUrl ? `${BASE_URL}/settings/resume/download` : '#';
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 60);
@@ -88,8 +98,9 @@ const Navbar = () => {
           {/* CTA */}
           <div className="hidden lg:flex items-center gap-3">
             <motion.a
-              href="#"
-              download
+              href={resumeUrl}
+              target="_blank"
+              rel="noopener noreferrer"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               className={`flex items-center gap-2 px-4 py-2 rounded-xl
@@ -172,8 +183,9 @@ const Navbar = () => {
             ))}
 
             <motion.a
-              href="#"
-              download
+              href={resumeUrl}
+              target="_blank"
+              rel="noopener noreferrer"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.55 }}

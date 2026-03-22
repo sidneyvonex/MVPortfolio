@@ -159,9 +159,20 @@ export default function SettingsPanel() {
               <input className={INP} value={settings.resumeUrl ?? ''} onChange={e => sf('resumeUrl', e.target.value)} placeholder="https://res.cloudinary.com/..." />
             </div>
             {settings.resumeUrl && (
-              <a href={settings.resumeUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-[#1A56FF] text-xs hover:underline">
-                <ExternalLink size={12} /> Preview current resume
-              </a>
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-[#8892A4]">PDF Preview</p>
+                  <a href={`${import.meta.env.VITE_API_URL || '/api'}/settings/resume/download`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-[#1A56FF] text-xs hover:underline">
+                    <ExternalLink size={11} /> Open in new tab
+                  </a>
+                </div>
+                <iframe
+                  src={`https://docs.google.com/viewer?url=${encodeURIComponent(settings.resumeUrl)}&embedded=true`}
+                  title="Resume Preview"
+                  className="w-full rounded-xl border border-[#E6EAF4]"
+                  style={{ height: '320px' }}
+                />
+              </div>
             )}
             <button onClick={() => resumeRef.current?.click()} disabled={resumeUploading} className="flex items-center gap-2 justify-center px-4 py-2.5 border border-[#E6EAF4] text-[#8892A4] hover:text-[#1A56FF] hover:border-[#1A56FF] rounded-xl text-sm transition-colors disabled:opacity-50">
               {resumeUploading ? <Loader2 size={14} className="animate-spin" /> : <UploadCloud size={14} />}
