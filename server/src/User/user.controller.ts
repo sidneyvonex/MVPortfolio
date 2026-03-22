@@ -1,3 +1,5 @@
+import https from 'https';
+import http from 'http';
 import { Request, Response } from 'express';
 import { registerUserService, loginUserService } from './user.service';
 import db from '../db/index';
@@ -214,6 +216,29 @@ export const uploadResumePdf = async (req: Request, res: Response) => {
                 set: { value: pdfUrl, updatedAt: new Date() },
             });
         res.status(200).json({ message: 'Resume uploaded successfully', url: pdfUrl });
+    } catch (error) {
+        const message = error instanceof Error ? error.message : 'Internal Server Error';
+        res.status(500).json({ error: message });
+    }
+};
+
+// GET /api/settings/resume/download — proxy the stored PDF with correct headers so the browser downloads it as resume.pdf
+export const downloadResume = async (req: Request, res: Response) => {
+    try {
+        const setting = await db.query.siteSettingsTable.findFirst({
+            where: (t, { eq }) => eq(t.key, 'resumeUrl'),
+        });
+        const resumeUrl = setting?.value;
+        if (!resumeUrl) {
+            res.status(404).json({ error: 'Resume not found' });
+            return;
+        }
+        const proto = resumeUrl.startsWith('https') ? https : http;
+        proto.get(resumeUrl, (upstream) => {
+            res.setHeader('Content-Type', 'application/pdf');
+            res.setHeader('Content-Disposition', 'attachment; filename="resume.pdf"');
+            upstream.pipe(res);
+        }).on('error', () => res.status(502).json({ error: 'Failed to fetch resume' }));
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Internal Server Error';
         res.status(500).json({ error: message });

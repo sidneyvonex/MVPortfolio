@@ -1,3 +1,4 @@
+import path from 'path';
 import multer from 'multer';
 import { Request, Response, NextFunction } from 'express';
 import cloudinary from '../config/cloudinary';
@@ -42,7 +43,7 @@ export const uploadToCloudinary = (folder = 'portfolio', resourceType: 'image' |
                     {
                         folder,
                         resource_type: resourceType,
-                        public_id: `${Date.now()}-${req.file!.fieldname}`,
+                        public_id: `${Date.now()}-${req.file!.fieldname}${resourceType === 'raw' ? path.extname(req.file!.originalname) : ''}`,
                         ...(resourceType === 'image' && { transformation: [{ quality: 'auto', fetch_format: 'auto' }] }),
                     },
                     (error, result) => {
