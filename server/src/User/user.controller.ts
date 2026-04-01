@@ -252,7 +252,7 @@ export const downloadResume = async (req: Request, res: Response) => {
             const pathPart = match?.[1] ?? '';
             const clean = decodeURIComponent(pathPart).split('?')[0];
             const ext = clean.includes('.') ? clean.split('.').pop() ?? 'pdf' : 'pdf';
-            const publicId = clean.endsWith(`.${ext}`) ? clean.slice(0, -1 * (ext.length + 1)) : clean;
+            const publicId = clean;
             const signedUrl = cloudinary.utils.private_download_url(publicId, ext, {
                 resource_type: 'raw',
                 type: 'upload',
