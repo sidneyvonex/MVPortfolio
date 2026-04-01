@@ -166,7 +166,7 @@ export default function SettingsPanel() {
                   </a>
                 </div>
                 <iframe
-                  src={settings.resumeUrl}
+                  src={`${import.meta.env.VITE_API_URL || '/api'}/settings/resume/download?mode=inline`}
                   title="Resume Preview"
                   className="w-full rounded-xl border border-[#E6EAF4]"
                   style={{ height: '320px' }}

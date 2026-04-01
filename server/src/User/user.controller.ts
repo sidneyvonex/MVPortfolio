@@ -1,9 +1,8 @@
-import https from 'https';
-import http from 'http';
 import { Request, Response } from 'express';
 import { registerUserService, loginUserService } from './user.service';
 import db from '../db/index';
 import { siteSettingsTable } from '../db/schema';
+import cloudinary from '../config/cloudinary';
 
 // POST /api/auth/register
 export const register = async (req: Request, res: Response) => {
@@ -222,7 +221,8 @@ export const uploadResumePdf = async (req: Request, res: Response) => {
     }
 };
 
-// GET /api/settings/resume/download — proxy-stream the PDF with download headers (follows redirects)
+// GET /api/settings/resume/download — proxy-stream the PDF from upstream.
+// Use ?mode=inline for preview in iframes, otherwise force download.
 export const downloadResume = async (req: Request, res: Response) => {
     try {
         const setting = await db.query.siteSettingsTable.findFirst({
@@ -233,48 +233,51 @@ export const downloadResume = async (req: Request, res: Response) => {
             res.status(404).json({ error: 'Resume not found' });
             return;
         }
+        const mode = req.query.mode === 'inline' ? 'inline' : 'attachment';
 
-        // Fetch the PDF server-side, following up to 5 redirects, then
-        // stream it back with headers that force the browser to download the file.
-        const proxyDownload = (url: string, hops = 0) => {
-            if (hops > 5) {
-                if (!res.headersSent) res.status(502).json({ error: 'Too many redirects' });
-                return;
-            }
-            const proto = url.startsWith('https') ? https : http;
-            const reqOptions = new URL(url);
-            proto.get(
-                { hostname: reqOptions.hostname, path: reqOptions.pathname + reqOptions.search, headers: { 'User-Agent': 'node-pdf-proxy' } },
-                (upstream) => {
-                    const { statusCode, headers: upHeaders } = upstream;
-                    if (
-                        (statusCode === 301 || statusCode === 302 || statusCode === 307 || statusCode === 308) &&
-                        upHeaders.location
-                    ) {
-                        // Follow redirect — resolve relative locations if needed
-                        const next = upHeaders.location.startsWith('http')
-                            ? upHeaders.location
-                            : `${reqOptions.protocol}//${reqOptions.host}${upHeaders.location}`;
-                        upstream.resume();
-                        proxyDownload(next, hops + 1);
-                        return;
-                    }
-                    if (statusCode !== 200) {
-                        upstream.resume();
-                        if (!res.headersSent) res.status(502).json({ error: `Upstream returned ${statusCode}` });
-                        return;
-                    }
-                    res.setHeader('Content-Type', 'application/pdf');
-                    res.setHeader('Content-Disposition', 'attachment; filename="resume.pdf"');
-                    if (upHeaders['content-length']) res.setHeader('Content-Length', upHeaders['content-length']);
-                    upstream.pipe(res);
-                }
-            ).on('error', () => {
-                if (!res.headersSent) res.status(502).json({ error: 'Failed to fetch resume' });
+        // Use fetch so redirects are handled correctly by the runtime.
+        let effectiveUrl = resumeUrl;
+        let upstream = await fetch(effectiveUrl, {
+            redirect: 'follow',
+            headers: {
+                Accept: 'application/pdf,*/*;q=0.9',
+                'User-Agent': 'portfolio-resume-proxy',
+            },
+        });
+
+        // Some Cloudinary raw assets can be ACL-protected even with upload URLs.
+        // For those cases, generate a short-lived signed download URL and retry.
+        if (!upstream.ok && upstream.status === 401 && resumeUrl.includes('res.cloudinary.com') && resumeUrl.includes('/raw/upload/')) {
+            const match = resumeUrl.match(/\/raw\/upload\/(?:v\d+\/)?(.+)$/);
+            const pathPart = match?.[1] ?? '';
+            const clean = decodeURIComponent(pathPart).split('?')[0];
+            const ext = clean.includes('.') ? clean.split('.').pop() ?? 'pdf' : 'pdf';
+            const publicId = clean.endsWith(`.${ext}`) ? clean.slice(0, -1 * (ext.length + 1)) : clean;
+            const signedUrl = cloudinary.utils.private_download_url(publicId, ext, {
+                resource_type: 'raw',
+                type: 'upload',
+                expires_at: Math.floor(Date.now() / 1000) + 120,
             });
-        };
+            effectiveUrl = signedUrl;
+            upstream = await fetch(effectiveUrl, {
+                redirect: 'follow',
+                headers: {
+                    Accept: 'application/pdf,*/*;q=0.9',
+                    'User-Agent': 'portfolio-resume-proxy',
+                },
+            });
+        }
 
-        proxyDownload(resumeUrl);
+        if (!upstream.ok) {
+            res.status(502).json({ error: `Upstream returned ${upstream.status}` });
+            return;
+        }
+
+        const bytes = Buffer.from(await upstream.arrayBuffer());
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `${mode}; filename="resume.pdf"`);
+        res.setHeader('Content-Length', String(bytes.length));
+        res.status(200).send(bytes);
     } catch (error) {
         if (!res.headersSent) {
             const message = error instanceof Error ? error.message : 'Internal Server Error';
