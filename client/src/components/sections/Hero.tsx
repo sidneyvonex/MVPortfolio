@@ -250,7 +250,7 @@ const Hero = () => {
               <motion.div
                 animate={{ y: [0, -8, 0] }}
                 transition={{ repeat: Infinity, duration: 3, ease: 'easeInOut' }}
-                className="absolute -left-12 top-8 bg-white rounded-2xl
+                className="hidden sm:flex absolute -left-12 top-8 bg-white rounded-2xl
                            px-4 py-3 shadow-xl flex items-center gap-3"
               >
                 <div className="w-10 h-10 bg-primary/10 rounded-xl
@@ -272,7 +272,7 @@ const Hero = () => {
                 animate={{ y: [0, 8, 0] }}
                 transition={{ repeat: Infinity, duration: 3.5,
                              ease: 'easeInOut', delay: 0.5 }}
-                className="absolute -right-12 bottom-12 bg-white rounded-2xl
+                className="hidden sm:flex absolute -right-12 bottom-12 bg-white rounded-2xl
                            px-4 py-3 shadow-xl flex items-center gap-3"
               >
                 <div className="w-10 h-10 bg-[#FFD600]/10 rounded-xl

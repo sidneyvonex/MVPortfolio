@@ -129,74 +129,62 @@ const Navbar = () => {
         </div>
       </motion.nav>
 
-      {/* Mobile overlay menu */}
+      {/* Mobile dropdown menu */}
       <AnimatePresence>
         {menuOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-[60] bg-[#0A0A0F]/95 backdrop-blur-xl
-                       flex flex-col items-center justify-center gap-2 px-8"
-          >
-            {/* Brand in overlay */}
-            <div className="absolute top-6 left-4 right-4 flex justify-between items-center px-2">
-              <span className="font-heading font-bold text-white text-lg">
-                Code<span className="text-[#1A56FF]">Sidney</span>
-              </span>
-              <motion.button
-                whileTap={{ scale: 0.9 }}
-                onClick={() => setMenuOpen(false)}
-                className="text-white/60 hover:text-white p-2"
-              >
-                <X size={22} />
-              </motion.button>
-            </div>
+          <>
+            <motion.button
+              type="button"
+              aria-label="Close menu backdrop"
+              onClick={() => setMenuOpen(false)}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="lg:hidden fixed inset-0 z-[52] bg-[#0A0A0F]/45"
+            />
 
-            {/* Decorative code snippet */}
-            <div className="mb-8 font-mono text-xs text-white/20 text-center leading-6">
-              <span className="text-[#1A56FF]/60">const</span> navigate = <span className="text-[#FFD600]/60">(section)</span> {'=>'} ...
-            </div>
-
-            {/* Nav links */}
-            {sections.map(({ id, label }, i) => (
-              <motion.button
-                key={id}
-                initial={{ opacity: 0, x: -30 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -30 }}
-                transition={{ delay: i * 0.06, duration: 0.3 }}
-                onClick={() => handleNav(id)}
-                className={`w-full max-w-xs text-left px-6 py-3.5 rounded-xl font-heading text-lg font-semibold
-                  transition-all duration-200 flex items-center justify-between group
-                  ${activeSection === id
-                    ? 'text-[#1A56FF] bg-[#1A56FF]/10'
-                    : 'text-white/80 hover:text-white hover:bg-white/5'}`}
-              >
-                {label}
-                <span className={`text-xs font-mono font-normal transition-opacity
-                  ${activeSection === id ? 'opacity-60 text-[#1A56FF]' : 'opacity-0 group-hover:opacity-30'}`}>
-                  #{id}
-                </span>
-              </motion.button>
-            ))}
-
-            <motion.a
-              href={resumeUrl}
-              download="resume.pdf"
-              rel="noopener noreferrer"
-              initial={{ opacity: 0, y: 20 }}
+            <motion.div
+              initial={{ opacity: 0, y: -12 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.55 }}
-              className="mt-6 flex items-center gap-2 bg-[#1A56FF] text-white
-                         px-8 py-3.5 rounded-xl font-body font-semibold
-                         shadow-lg shadow-[#1A56FF]/30"
+              exit={{ opacity: 0, y: -12 }}
+              transition={{ duration: 0.18 }}
+              className="lg:hidden fixed left-0 right-0 top-[68px] z-[53] px-4"
             >
-              <Download size={16} />
-              Download Resume
-            </motion.a>
-          </motion.div>
+              <div className="mx-auto w-full max-w-7xl rounded-2xl border border-white/10 bg-[#0A0A0F]/95 backdrop-blur-xl shadow-2xl p-3">
+                <div className="flex flex-col gap-1.5">
+                  {navLinks.map(({ id, label }, i) => (
+                    <motion.button
+                      key={id}
+                      initial={{ opacity: 0, x: -12 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -12 }}
+                      transition={{ delay: i * 0.04, duration: 0.2 }}
+                      onClick={() => handleNav(id)}
+                      className={`w-full text-left px-4 py-3 rounded-xl font-heading text-base font-semibold transition-colors
+                        ${activeSection === id
+                          ? 'text-[#1A56FF] bg-white/10'
+                          : 'text-white/85 hover:text-white hover:bg-white/8'}`}
+                    >
+                      {label}
+                    </motion.button>
+                  ))}
+
+                  <motion.a
+                    href={resumeUrl}
+                    download="resume.pdf"
+                    rel="noopener noreferrer"
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.22 }}
+                    className="mt-1 flex items-center justify-center gap-2 bg-[#1A56FF] text-white px-4 py-3 rounded-xl font-body font-semibold shadow-lg shadow-[#1A56FF]/30"
+                  >
+                    <Download size={16} />
+                    Download Resume
+                  </motion.a>
+                </div>
+              </div>
+            </motion.div>
+          </>
         )}
       </AnimatePresence>
     </>
