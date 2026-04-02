@@ -270,7 +270,7 @@ export const uploadResumePdf = async (req: Request, res: Response) => {
                 target: siteSettingsTable.key,
                 set: { value: pdfUrl, updatedAt: new Date() },
             });
-        res.status(200).json({ message: 'Resume uploaded successfully', url: pdfUrl });
+        res.status(200).json({ message: 'Resume uploaded successfully', resumeUrl: pdfUrl });
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Internal Server Error';
         res.status(500).json({ error: message });

@@ -117,7 +117,7 @@ const Navbar = () => {
           <div className="hidden lg:flex items-center gap-3">
             <motion.a
               href={resumeUrl}
-              target="_blank"
+              download="resume.pdf"
               rel="noopener noreferrer"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
@@ -147,7 +147,7 @@ const Navbar = () => {
         </div>
       </motion.nav>
 
-      {/* Mobile overlay menu */}
+      {/* Mobile dropdown menu */}
       <AnimatePresence>
         {menuOpen && (
           <>
