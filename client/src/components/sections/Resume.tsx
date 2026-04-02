@@ -121,7 +121,7 @@ const Resume = () => {
         >
           {/* Vertical rule */}
           <div className="absolute left-5 top-0 bottom-0 w-px
-                          bg-gradient-to-b from-[#1A56FF]/50 via-[#1A56FF]/20
+                          bg-linear-to-b from-[#1A56FF]/50 via-[#1A56FF]/20
                           to-transparent" />
 
           {experiences.map((exp, i) => (

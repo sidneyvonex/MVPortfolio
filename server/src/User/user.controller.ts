@@ -1,9 +1,64 @@
-import https from 'https';
-import http from 'http';
 import { Request, Response } from 'express';
 import { registerUserService, loginUserService } from './user.service';
 import db from '../db/index';
 import { siteSettingsTable } from '../db/schema';
+import cloudinary from '../config/cloudinary';
+
+const normalizeResumeUrl = (rawUrl: string) => {
+    const url = rawUrl.trim();
+    if (!url) return url;
+
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+        return url;
+    }
+
+    const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+    if (cloudName && (url.startsWith('/upload/') || url.startsWith('upload/'))) {
+        const normalizedPath = url.startsWith('/') ? url : `/${url}`;
+        return `https://res.cloudinary.com/${cloudName}/raw${normalizedPath}`;
+    }
+
+    return url;
+};
+
+const fetchResumeBytes = async (resumeUrl: string) => {
+    let effectiveUrl = resumeUrl;
+    let upstream = await fetch(effectiveUrl, {
+        redirect: 'follow',
+        headers: {
+            Accept: 'application/pdf,*/*;q=0.9',
+            'User-Agent': 'portfolio-resume-proxy',
+        },
+    });
+
+    if (!upstream.ok && upstream.status === 401 && resumeUrl.includes('res.cloudinary.com') && resumeUrl.includes('/raw/upload/')) {
+        const match = resumeUrl.match(/\/raw\/upload\/(?:v\d+\/)?(.+)$/);
+        const pathPart = match?.[1] ?? '';
+        const clean = decodeURIComponent(pathPart).split('?')[0];
+        const ext = clean.includes('.') ? clean.split('.').pop() ?? 'pdf' : 'pdf';
+        const publicId = clean;
+        const signedUrl = cloudinary.utils.private_download_url(publicId, ext, {
+            resource_type: 'raw',
+            type: 'upload',
+            expires_at: Math.floor(Date.now() / 1000) + 120,
+        });
+
+        effectiveUrl = signedUrl;
+        upstream = await fetch(effectiveUrl, {
+            redirect: 'follow',
+            headers: {
+                Accept: 'application/pdf,*/*;q=0.9',
+                'User-Agent': 'portfolio-resume-proxy',
+            },
+        });
+    }
+
+    if (!upstream.ok) {
+        throw new Error(`Upstream returned ${upstream.status}`);
+    }
+
+    return Buffer.from(await upstream.arrayBuffer());
+};
 
 // POST /api/auth/register
 export const register = async (req: Request, res: Response) => {
@@ -115,7 +170,7 @@ export const getResumeUrl = async (_req: Request, res: Response) => {
             res.status(404).json({ error: 'No resume URL set yet' });
             return;
         }
-        res.status(200).json({ url: setting.value });
+        res.status(200).json({ url: normalizeResumeUrl(setting.value) });
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Internal Server Error';
         res.status(500).json({ error: message });
@@ -166,7 +221,7 @@ export const getAllSettings = async (_req: Request, res: Response) => {
     try {
         const rows = await db.query.siteSettingsTable.findMany();
         const settings = rows.reduce((acc, row) => {
-            acc[row.key] = row.value;
+            acc[row.key] = row.key === 'resumeUrl' ? normalizeResumeUrl(row.value) : row.value;
             return acc;
         }, {} as Record<string, string>);
         res.status(200).json(settings);
@@ -222,25 +277,35 @@ export const uploadResumePdf = async (req: Request, res: Response) => {
     }
 };
 
-// GET /api/settings/resume/download — proxy the stored PDF with correct headers so the browser downloads it as resume.pdf
+// GET /api/settings/resume/download — stream the stored PDF for download or inline preview
 export const downloadResume = async (req: Request, res: Response) => {
     try {
         const setting = await db.query.siteSettingsTable.findFirst({
             where: (t, { eq }) => eq(t.key, 'resumeUrl'),
         });
-        const resumeUrl = setting?.value;
+        const resumeUrl = setting?.value ? normalizeResumeUrl(setting.value) : undefined;
         if (!resumeUrl) {
             res.status(404).json({ error: 'Resume not found' });
             return;
         }
-        const proto = resumeUrl.startsWith('https') ? https : http;
-        proto.get(resumeUrl, (upstream) => {
-            res.setHeader('Content-Type', 'application/pdf');
-            res.setHeader('Content-Disposition', 'attachment; filename="resume.pdf"');
-            upstream.pipe(res);
-        }).on('error', () => res.status(502).json({ error: 'Failed to fetch resume' }));
+
+        const mode = req.query.mode === 'inline' ? 'inline' : 'attachment';
+        const bytes = await fetchResumeBytes(resumeUrl);
+
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `${mode}; filename="resume.pdf"`);
+        res.setHeader('Content-Length', String(bytes.length));
+        res.status(200).send(bytes);
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Internal Server Error';
-        res.status(500).json({ error: message });
+        if (!res.headersSent) {
+            res.status(502).json({ error: message });
+        }
     }
+};
+
+// GET /api/settings/resume/preview — proxy the stored PDF for inline browser preview
+export const previewResume = async (req: Request, res: Response) => {
+    req.query.mode = 'inline';
+    return downloadResume(req, res);
 };

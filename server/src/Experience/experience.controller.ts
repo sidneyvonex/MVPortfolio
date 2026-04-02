@@ -5,7 +5,7 @@ import {
     createExperienceService,
     updateExperienceService,
     deleteExperienceService
-} from './experience.servives';
+} from './experience.services';
 
 // GET /api/experience
 export const getAllExperience = async (_req: Request, res: Response) => {

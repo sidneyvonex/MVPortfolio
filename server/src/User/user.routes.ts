@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { register, login, uploadHeroImage, getHeroImageUrl, setResumeUrl, getResumeUrl, setTagline, getTagline, getAllSettings, updateSettings, uploadResumePdf, downloadResume } from './user.controller';
+import { register, login, uploadHeroImage, getHeroImageUrl, setResumeUrl, getResumeUrl, setTagline, getTagline, getAllSettings, updateSettings, uploadResumePdf, downloadResume, previewResume } from './user.controller';
 import { upload, uploadToCloudinary, uploadPdf } from '../Middleware/upload';
 import { authenticate } from '../Middleware/auth';
 
@@ -154,6 +154,7 @@ UserRouter.get('/settings/hero', getHeroImageUrl);
 UserRouter.post('/settings/resume', authenticate, setResumeUrl);
 UserRouter.get('/settings/resume', getResumeUrl);
 UserRouter.get('/settings/resume/download', downloadResume);
+UserRouter.get('/settings/resume/preview', previewResume);
 
 /**
  * @openapi

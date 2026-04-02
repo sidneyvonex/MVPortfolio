@@ -43,6 +43,8 @@ export const uploadToCloudinary = (folder = 'portfolio', resourceType: 'image' |
                     {
                         folder,
                         resource_type: resourceType,
+                        type: 'upload',
+                        ...(resourceType === 'raw' && { access_mode: 'public' }),
                         public_id: `${Date.now()}-${req.file!.fieldname}${resourceType === 'raw' ? path.extname(req.file!.originalname) : ''}`,
                         ...(resourceType === 'image' && { transformation: [{ quality: 'auto', fetch_format: 'auto' }] }),
                     },
