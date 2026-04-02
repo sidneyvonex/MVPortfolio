@@ -4,6 +4,62 @@ import db from '../db/index';
 import { siteSettingsTable } from '../db/schema';
 import cloudinary from '../config/cloudinary';
 
+const normalizeResumeUrl = (rawUrl: string) => {
+    const url = rawUrl.trim();
+    if (!url) return url;
+
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+        return url;
+    }
+
+    const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+    if (cloudName && (url.startsWith('/upload/') || url.startsWith('upload/'))) {
+        const normalizedPath = url.startsWith('/') ? url : `/${url}`;
+        return `https://res.cloudinary.com/${cloudName}/raw${normalizedPath}`;
+    }
+
+    return url;
+};
+
+const fetchResumeBytes = async (resumeUrl: string) => {
+    let effectiveUrl = resumeUrl;
+    let upstream = await fetch(effectiveUrl, {
+        redirect: 'follow',
+        headers: {
+            Accept: 'application/pdf,*/*;q=0.9',
+            'User-Agent': 'portfolio-resume-proxy',
+        },
+    });
+
+    if (!upstream.ok && upstream.status === 401 && resumeUrl.includes('res.cloudinary.com') && resumeUrl.includes('/raw/upload/')) {
+        const match = resumeUrl.match(/\/raw\/upload\/(?:v\d+\/)?(.+)$/);
+        const pathPart = match?.[1] ?? '';
+        const clean = decodeURIComponent(pathPart).split('?')[0];
+        const ext = clean.includes('.') ? clean.split('.').pop() ?? 'pdf' : 'pdf';
+        const publicId = clean;
+        const signedUrl = cloudinary.utils.private_download_url(publicId, ext, {
+            resource_type: 'raw',
+            type: 'upload',
+            expires_at: Math.floor(Date.now() / 1000) + 120,
+        });
+
+        effectiveUrl = signedUrl;
+        upstream = await fetch(effectiveUrl, {
+            redirect: 'follow',
+            headers: {
+                Accept: 'application/pdf,*/*;q=0.9',
+                'User-Agent': 'portfolio-resume-proxy',
+            },
+        });
+    }
+
+    if (!upstream.ok) {
+        throw new Error(`Upstream returned ${upstream.status}`);
+    }
+
+    return Buffer.from(await upstream.arrayBuffer());
+};
+
 // POST /api/auth/register
 export const register = async (req: Request, res: Response) => {
     const { email, password } = req.body;
@@ -114,7 +170,7 @@ export const getResumeUrl = async (_req: Request, res: Response) => {
             res.status(404).json({ error: 'No resume URL set yet' });
             return;
         }
-        res.status(200).json({ url: setting.value });
+        res.status(200).json({ url: normalizeResumeUrl(setting.value) });
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Internal Server Error';
         res.status(500).json({ error: message });
@@ -165,7 +221,7 @@ export const getAllSettings = async (_req: Request, res: Response) => {
     try {
         const rows = await db.query.siteSettingsTable.findMany();
         const settings = rows.reduce((acc, row) => {
-            acc[row.key] = row.value;
+            acc[row.key] = row.key === 'resumeUrl' ? normalizeResumeUrl(row.value) : row.value;
             return acc;
         }, {} as Record<string, string>);
         res.status(200).json(settings);
@@ -221,67 +277,35 @@ export const uploadResumePdf = async (req: Request, res: Response) => {
     }
 };
 
-// GET /api/settings/resume/download — proxy-stream the PDF from upstream.
-// Use ?mode=inline for preview in iframes, otherwise force download.
+// GET /api/settings/resume/download — stream the stored PDF for download or inline preview
 export const downloadResume = async (req: Request, res: Response) => {
     try {
         const setting = await db.query.siteSettingsTable.findFirst({
             where: (t, { eq }) => eq(t.key, 'resumeUrl'),
         });
-        const resumeUrl = setting?.value;
+        const resumeUrl = setting?.value ? normalizeResumeUrl(setting.value) : undefined;
         if (!resumeUrl) {
             res.status(404).json({ error: 'Resume not found' });
             return;
         }
+
         const mode = req.query.mode === 'inline' ? 'inline' : 'attachment';
+        const bytes = await fetchResumeBytes(resumeUrl);
 
-        // Use fetch so redirects are handled correctly by the runtime.
-        let effectiveUrl = resumeUrl;
-        let upstream = await fetch(effectiveUrl, {
-            redirect: 'follow',
-            headers: {
-                Accept: 'application/pdf,*/*;q=0.9',
-                'User-Agent': 'portfolio-resume-proxy',
-            },
-        });
-
-        // Some Cloudinary raw assets can be ACL-protected even with upload URLs.
-        // For those cases, generate a short-lived signed download URL and retry.
-        if (!upstream.ok && upstream.status === 401 && resumeUrl.includes('res.cloudinary.com') && resumeUrl.includes('/raw/upload/')) {
-            const match = resumeUrl.match(/\/raw\/upload\/(?:v\d+\/)?(.+)$/);
-            const pathPart = match?.[1] ?? '';
-            const clean = decodeURIComponent(pathPart).split('?')[0];
-            const ext = clean.includes('.') ? clean.split('.').pop() ?? 'pdf' : 'pdf';
-            const publicId = clean;
-            const signedUrl = cloudinary.utils.private_download_url(publicId, ext, {
-                resource_type: 'raw',
-                type: 'upload',
-                expires_at: Math.floor(Date.now() / 1000) + 120,
-            });
-            effectiveUrl = signedUrl;
-            upstream = await fetch(effectiveUrl, {
-                redirect: 'follow',
-                headers: {
-                    Accept: 'application/pdf,*/*;q=0.9',
-                    'User-Agent': 'portfolio-resume-proxy',
-                },
-            });
-        }
-
-        if (!upstream.ok) {
-            res.status(502).json({ error: `Upstream returned ${upstream.status}` });
-            return;
-        }
-
-        const bytes = Buffer.from(await upstream.arrayBuffer());
         res.setHeader('Content-Type', 'application/pdf');
         res.setHeader('Content-Disposition', `${mode}; filename="resume.pdf"`);
         res.setHeader('Content-Length', String(bytes.length));
         res.status(200).send(bytes);
     } catch (error) {
+        const message = error instanceof Error ? error.message : 'Internal Server Error';
         if (!res.headersSent) {
-            const message = error instanceof Error ? error.message : 'Internal Server Error';
-            res.status(500).json({ error: message });
+            res.status(502).json({ error: message });
         }
     }
+};
+
+// GET /api/settings/resume/preview — proxy the stored PDF for inline browser preview
+export const previewResume = async (req: Request, res: Response) => {
+    req.query.mode = 'inline';
+    return downloadResume(req, res);
 };

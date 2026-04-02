@@ -8,6 +8,7 @@ import type { SettingsMap } from '../../services/adminApi';
 
 // Only show a subset in the top nav (not hero)
 const navLinks = sections.filter(s => s.id !== 'hero');
+const mobileLinks = sections;
 
 const Navbar = () => {
   const [scrolled, setScrolled] = useState(false);
@@ -23,7 +24,8 @@ const Navbar = () => {
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 60);
-    window.addEventListener('scroll', onScroll);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
@@ -54,13 +56,13 @@ const Navbar = () => {
         initial={{ y: -100, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.7, ease: 'easeOut' }}
-        className={`fixed top-0 left-0 right-0 z-50 h-16 lg:h-[72px] transition-all duration-500
+        className={`fixed top-0 left-0 right-0 z-60 min-h-16 lg:min-h-18 pt-[env(safe-area-inset-top)] transition-all duration-500
           ${scrolled
             ? 'bg-white/95 backdrop-blur-xl shadow-sm border-b border-black/5'
             : 'bg-transparent'
           }`}
       >
-        <div className="max-w-7xl h-full mx-auto flex items-center justify-between px-4 sm:px-6 lg:px-16 xl:px-24">
+        <div className="max-w-7xl h-16 lg:h-18 mx-auto flex items-center justify-between px-4 sm:px-6 lg:px-16 xl:px-24">
 
           {/* Brand mark */}
           <motion.button
@@ -71,7 +73,7 @@ const Navbar = () => {
           >
             <span
               className={`flex items-center justify-center w-8 h-8 rounded-lg text-white text-xs font-bold
-                bg-gradient-to-br from-[#1A56FF] to-[#0D2DB4] shadow-md`}
+                bg-linear-to-br from-[#1A56FF] to-[#0D2DB4] shadow-md`}
             >
               <Terminal size={14} />
             </span>
@@ -101,7 +103,7 @@ const Navbar = () => {
                   {isActive && (
                     <motion.span
                       layoutId="navUnderline"
-                      className={`absolute bottom-0 left-0 right-0 h-[2px] rounded-full
+                      className={`absolute bottom-0 left-0 right-0 h-0.5 rounded-full
                         ${scrolled ? 'bg-[#1A56FF]' : 'bg-[#FFD600]'}`}
                       transition={{ type: 'spring', bounce: 0.25, duration: 0.4 }}
                     />
@@ -156,7 +158,7 @@ const Navbar = () => {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="lg:hidden fixed inset-0 z-[52] bg-[#0A0A0F]/45"
+              className="lg:hidden fixed inset-0 z-40 bg-[#0A0A0F]/45"
             />
 
             <motion.div
@@ -164,11 +166,28 @@ const Navbar = () => {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -12 }}
               transition={{ duration: 0.18 }}
-              className="lg:hidden fixed left-0 right-0 top-[calc(env(safe-area-inset-top)+4rem)] z-[53] px-4"
+              className="lg:hidden fixed left-0 right-0 top-[calc(env(safe-area-inset-top)+4rem)] z-50 px-3 sm:px-4"
             >
-              <div className="mx-auto w-full max-w-7xl max-h-[calc(100vh-5rem)] overflow-y-auto rounded-2xl border border-white/10 bg-[#0A0A0F]/95 backdrop-blur-xl shadow-2xl p-3">
-                <div className="flex flex-col gap-1.5">
-                  {navLinks.map(({ id, label }, i) => (
+              <div className="relative mx-auto w-full max-w-md max-h-[calc(100vh-5rem)] overflow-y-auto rounded-2xl border border-white/10 bg-[#0A0A0F]/95 backdrop-blur-xl shadow-2xl p-3">
+                <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-2xl">
+                  <span className="absolute top-3 right-4 font-mono text-[10px] text-[#1A56FF]/45">&lt;/&gt;</span>
+                  <span className="absolute top-12 left-4 font-mono text-[10px] text-white/18">const</span>
+                  <span className="absolute bottom-20 right-6 font-mono text-[10px] text-white/18">return</span>
+                  <span className="absolute bottom-8 left-6 font-mono text-[10px] text-[#FFD600]/35">{'{ }'}</span>
+                  <div className="absolute inset-y-0 right-14 w-px bg-linear-to-b from-transparent via-[#1A56FF]/20 to-transparent" />
+                </div>
+
+                <div className="relative z-10 mb-2 flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-3 py-2">
+                  <p className="font-mono text-[10px] text-white/60">
+                    <span className="text-[#1A56FF]/75">const</span>{' '}
+                    <span className="text-white/75">navigate</span> =
+                    <span className="text-[#FFD600]/75"> (section)</span>{' => '}...
+                  </p>
+                  <span className="font-mono text-[10px] text-[#1A56FF]/70">menu.tsx</span>
+                </div>
+
+                <div className="relative z-10 flex flex-col gap-1.5">
+                  {mobileLinks.map(({ id, label }, i) => (
                     <motion.button
                       key={id}
                       initial={{ opacity: 0, x: -12 }}
@@ -187,7 +206,7 @@ const Navbar = () => {
 
                   <motion.a
                     href={resumeUrl}
-                    download="resume.pdf"
+                    target="_blank"
                     rel="noopener noreferrer"
                     onClick={() => setMenuOpen(false)}
                     initial={{ opacity: 0, y: 8 }}

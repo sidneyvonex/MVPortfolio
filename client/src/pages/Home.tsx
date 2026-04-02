@@ -28,19 +28,21 @@ const Home = () => {
   if (isLoading) return <PageLoader />;
 
   return (
-    <main className="relative animate-fadeIn">
+    <main className="relative">
       <Navbar />
       <DotNavigation />
-      <Hero />
-      <About />
-      <Resume />
-      <Skills />
-      <Portfolio />
-      <Education />
-      <Community />
-      <Testimonials />
-      <Contact />
-      <Footer />
+      <div className="animate-fadeIn">
+        <Hero />
+        <About />
+        <Resume />
+        <Skills />
+        <Portfolio />
+        <Education />
+        <Community />
+        <Testimonials />
+        <Contact />
+        <Footer />
+      </div>
     </main>
   );
 };

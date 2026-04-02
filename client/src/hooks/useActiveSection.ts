@@ -16,28 +16,53 @@ export const useActiveSection = () => {
   const [activeSection, setActiveSection] = useState('hero');
 
   useEffect(() => {
-    const observers: IntersectionObserver[] = [];
+    let ticking = false;
 
-    sections.forEach(({ id }) => {
-      const el = document.getElementById(id);
-      if (!el) return;
+    const updateActiveSection = () => {
+      const navbarHeight = window.innerWidth >= 1024 ? 72 : 64;
+      const anchor = window.scrollY + navbarHeight + window.innerHeight * 0.25;
 
-      const observer = new IntersectionObserver(
-        ([entry]) => {
-          if (entry.isIntersecting) setActiveSection(id);
-        },
-        { threshold: 0.4 }
-      );
+      let current = sections[0]?.id ?? 'hero';
 
-      observer.observe(el);
-      observers.push(observer);
-    });
+      for (const { id } of sections) {
+        const el = document.getElementById(id);
+        if (!el) continue;
+        if (el.offsetTop <= anchor) current = id;
+      }
 
-    return () => observers.forEach(o => o.disconnect());
+      setActiveSection(current);
+      ticking = false;
+    };
+
+    const onScrollOrResize = () => {
+      if (ticking) return;
+      ticking = true;
+      window.requestAnimationFrame(updateActiveSection);
+    };
+
+    onScrollOrResize();
+    window.addEventListener('scroll', onScrollOrResize, { passive: true });
+    window.addEventListener('resize', onScrollOrResize);
+
+    return () => {
+      window.removeEventListener('scroll', onScrollOrResize);
+      window.removeEventListener('resize', onScrollOrResize);
+    };
   }, []);
 
   const scrollToSection = (id: string) => {
-    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
+    const section = document.getElementById(id);
+    if (!section) return;
+
+    if (id === 'hero') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
+    const navbarHeight = window.innerWidth >= 1024 ? 72 : 64;
+    const sectionTop = section.getBoundingClientRect().top + window.scrollY - navbarHeight;
+
+    window.scrollTo({ top: Math.max(0, sectionTop), behavior: 'smooth' });
   };
 
   return { activeSection, scrollToSection };

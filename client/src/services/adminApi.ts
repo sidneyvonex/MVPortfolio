@@ -151,5 +151,8 @@ export const settingsApi = {
   getAll:        ()               => aGet('/settings')                                       as Promise<SettingsMap>,
   update:        (d: SettingsMap) => aPut('/settings', d),
   uploadHero:    (f: File)        => aUpload('/auth/upload/hero', 'heroImage', f)            as Promise<{ heroImageUrl: string }>,
-  uploadResume:  (f: File)        => aUpload('/settings/resume/upload', 'resume', f)         as Promise<{ resumeUrl: string }>,
+  uploadResume:  async (f: File)  => {
+    const res = await aUpload('/settings/resume/upload', 'resume', f) as { resumeUrl?: string; url?: string };
+    return { resumeUrl: res.resumeUrl ?? res.url ?? '' };
+  },
 };
