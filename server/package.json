@@ -16,7 +16,6 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "packageManager": "pnpm@10.29.3",
   "dependencies": {
     "@neondatabase/serverless": "^1.0.2",
     "bcryptjs": "^3.0.3",
