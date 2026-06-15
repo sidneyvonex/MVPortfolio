@@ -39,7 +39,7 @@ jobs:
       - name: Prepare deployment package
         run: |
           mkdir -p ../deploy
-          cp package.json ../deploy/
+          node -e "const p=require('./package.json');delete p.packageManager;require('fs').writeFileSync('../deploy/package.json',JSON.stringify(p,null,2))"
           cp -r dist ../deploy/
           cp -r node_modules ../deploy/
 
