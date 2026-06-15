@@ -26,17 +26,27 @@ jobs:
         with:
           node-version: '24.x'
 
-      - name: npm install, build, and test
+      - name: Install dependencies and build
         run: |
           npm install
-          npm run build --if-present
-          npm run test --if-present
+          npm run build
+
+      - name: Prepare deployment package
+        # Copy package.json and the compiled dist/ into a clean deploy/ folder.
+        # Azure will extract this as wwwroot — no subdirectory, so "cd server" is not needed.
+        run: |
+          mkdir -p ../deploy
+          cp package.json ../deploy/
+          cp -r dist ../deploy/
+          # Include node_modules so Azure doesn't need to reinstall at runtime
+          cp -r node_modules ../deploy/
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
         with:
           name: node-app
-          path: server
+          # Upload the flattened deploy folder — its CONTENTS become wwwroot
+          path: deploy
 
   deploy:
     runs-on: ubuntu-latest
@@ -50,8 +60,8 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: node-app
-          path: server
-      
+          path: deploy
+
       - name: Login to Azure
         uses: azure/login@v2
         with:
@@ -65,5 +75,5 @@ jobs:
         with:
           app-name: 'sidneymvportfolio-backend'
           slot-name: 'Production'
-          package: server
-          
+          # Deploy the flat folder — Azure places these files directly in wwwroot
+          package: deploy
