@@ -41,7 +41,7 @@ jobs:
           mkdir -p ../deploy
           node -e "const p=require('./package.json');delete p.packageManager;require('fs').writeFileSync('../deploy/package.json',JSON.stringify(p,null,2))"
           cp -r dist ../deploy/
-          cp -r node_modules ../deploy/
+          cd ../deploy && npm install --omit=dev
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
