@@ -10,7 +10,7 @@ const EMAIL    = process.argv[2];
 const PASSWORD = process.argv[3];
 
 if (!EMAIL || !PASSWORD) {
-  console.error('Usage: pnpm create-admin <email> <password>');
+  console.error('Usage: npm run create-admin <email> <password>');
   process.exit(1);
 }
 

@@ -6,8 +6,8 @@ A production-ready personal portfolio with a CMS-style admin panel. All content 
 
 ```
 portfolio/
-  client/       React 19 + TypeScript frontend (Vite)
-  server/       Express 5 + TypeScript REST API
+  client/       React 19 + TypeScript frontend (Vite), deployed to Cloudflare Pages
+  server/       Hono + TypeScript REST API, deployed as a Cloudflare Worker
   README.md     This file
   SETUP.md      Environment setup and running instructions
   ARCHITECTURE.md  How the system is designed and how it works
@@ -27,13 +27,13 @@ portfolio/
 - Lucide React (icons throughout)
 
 **Backend**
-- Express 5 + TypeScript
-- Drizzle ORM (schema, migrations, queries)
+- Hono + TypeScript, running on Cloudflare Workers
+- Drizzle ORM (schema, migrations, queries) via the Neon serverless HTTP driver
 - Neon Postgres (serverless PostgreSQL)
-- Cloudinary (image and PDF upload)
+- Cloudinary (image and PDF upload, via signed REST calls — no Node SDK)
 - JSON Web Tokens (admin authentication)
 - bcryptjs (password hashing)
-- Swagger / OpenAPI (auto-generated API docs)
+- Swagger / OpenAPI (spec generated at build time, served at `/api/docs`)
 
 ## Quick Links
 

@@ -1,4 +1,5 @@
-import { Request, Response } from 'express';
+import type { Context } from 'hono';
+import type { AppEnv } from '../types/env';
 import {
     getAllEducationService,
     getEducationByIdService,
@@ -6,113 +7,106 @@ import {
     updateEducationService,
     deleteEducationService
 } from './education.services';
+import { readUploadedFile, uploadFileToCloudinary } from '../Middleware/upload';
 
 // GET /api/education
-export const getAllEducation = async (_req: Request, res: Response) => {
+export const getAllEducation = async (c: Context<AppEnv>) => {
     try {
         const education = await getAllEducationService();
-        res.status(200).json(education);
+        return c.json(education, 200);
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Internal Server Error';
-        res.status(500).json({ error: message });
+        return c.json({ error: message }, 500);
     }
 };
 
 // GET /api/education/:educationId
-export const getEducationById = async (req: Request, res: Response) => {
-    const educationId = parseInt(req.params.educationId as string);
+export const getEducationById = async (c: Context<AppEnv>) => {
+    const educationId = parseInt(c.req.param('educationId') ?? '');
     if (isNaN(educationId)) {
-        res.status(400).json({ error: 'Invalid education ID' });
-        return;
+        return c.json({ error: 'Invalid education ID' }, 400);
     }
     try {
         const entry = await getEducationByIdService(educationId);
         if (!entry) {
-            res.status(404).json({ error: 'Education entry not found' });
-            return;
+            return c.json({ error: 'Education entry not found' }, 404);
         }
-        res.status(200).json(entry);
+        return c.json(entry, 200);
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Internal Server Error';
-        res.status(500).json({ error: message });
+        return c.json({ error: message }, 500);
     }
 };
 
 // POST /api/education
-export const createEducation = async (req: Request, res: Response) => {
-    const { institution, degree, description, logoUrl, startDate, endDate, order } = req.body;
+export const createEducation = async (c: Context<AppEnv>) => {
+    const { institution, degree, description, logoUrl, startDate, endDate, order } = await c.req.json();
     if (!institution || !degree) {
-        res.status(400).json({ error: 'Institution and degree are required' });
-        return;
+        return c.json({ error: 'Institution and degree are required' }, 400);
     }
     try {
         const result = await createEducationService({ institution, degree, description, logoUrl, startDate, endDate, order });
-        res.status(201).json({ message: result });
+        return c.json({ message: result }, 201);
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Internal Server Error';
-        res.status(500).json({ error: message });
+        return c.json({ error: message }, 500);
     }
 };
 
 // PUT /api/education/:educationId
-export const updateEducation = async (req: Request, res: Response) => {
-    const educationId = parseInt(req.params.educationId as string);
+export const updateEducation = async (c: Context<AppEnv>) => {
+    const educationId = parseInt(c.req.param('educationId') ?? '');
     if (isNaN(educationId)) {
-        res.status(400).json({ error: 'Invalid education ID' });
-        return;
+        return c.json({ error: 'Invalid education ID' }, 400);
     }
-    const { institution, degree, description, logoUrl, startDate, endDate, order } = req.body;
+    const { institution, degree, description, logoUrl, startDate, endDate, order } = await c.req.json();
     if (!institution || !degree) {
-        res.status(400).json({ error: 'Institution and degree are required' });
-        return;
+        return c.json({ error: 'Institution and degree are required' }, 400);
     }
     try {
         const result = await updateEducationService(educationId, { institution, degree, description, logoUrl, startDate, endDate, order });
-        res.status(200).json({ message: result });
+        return c.json({ message: result }, 200);
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Internal Server Error';
-        res.status(500).json({ error: message });
+        return c.json({ error: message }, 500);
     }
 };
 
 // DELETE /api/education/:educationId
-export const deleteEducation = async (req: Request, res: Response) => {
-    const educationId = parseInt(req.params.educationId as string);
+export const deleteEducation = async (c: Context<AppEnv>) => {
+    const educationId = parseInt(c.req.param('educationId') ?? '');
     if (isNaN(educationId)) {
-        res.status(400).json({ error: 'Invalid education ID' });
-        return;
+        return c.json({ error: 'Invalid education ID' }, 400);
     }
     try {
         const result = await deleteEducationService(educationId);
-        res.status(200).json({ message: result });
+        return c.json({ message: result }, 200);
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Internal Server Error';
-        res.status(500).json({ error: message });
+        return c.json({ error: message }, 500);
     }
 };
 
-// POST /api/education/:educationId/logo  — upload logo via Cloudinary
-export const uploadEducationLogo = async (req: Request, res: Response) => {
-    const educationId = parseInt(req.params.educationId as string);
+// POST /api/education/:educationId/logo — upload logo via Cloudinary
+export const uploadEducationLogo = async (c: Context<AppEnv>) => {
+    const educationId = parseInt(c.req.param('educationId') ?? '');
     if (isNaN(educationId)) {
-        res.status(400).json({ error: 'Invalid education ID' });
-        return;
+        return c.json({ error: 'Invalid education ID' }, 400);
     }
-    const logoUrl = (req.file as any)?.path;
-    if (!logoUrl) {
-        res.status(400).json({ error: 'No image file provided' });
-        return;
-    }
+    const file = await readUploadedFile(c, 'logo', 'image');
+    if (file instanceof Response) return file;
+
     try {
         const entry = await getEducationByIdService(educationId);
         if (!entry) {
-            res.status(404).json({ error: 'Education entry not found' });
-            return;
+            return c.json({ error: 'Education entry not found' }, 404);
         }
+        const uploaded = await uploadFileToCloudinary(c.env, file, 'portfolio/education', 'logo');
+        const logoUrl = uploaded.secure_url;
         const result = await updateEducationService(educationId, { ...entry, logoUrl });
-        res.status(200).json({ message: result, logoUrl });
+        return c.json({ message: result, logoUrl }, 200);
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Internal Server Error';
-        res.status(500).json({ error: message });
+        return c.json({ error: message }, 500);
     }
 };

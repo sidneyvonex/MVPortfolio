@@ -1,4 +1,5 @@
-import { Request, Response } from 'express';
+import type { Context } from 'hono';
+import type { AppEnv } from '../types/env';
 import {
     getAllExperienceService,
     getExperienceByIdService,
@@ -8,85 +9,79 @@ import {
 } from './experience.services';
 
 // GET /api/experience
-export const getAllExperience = async (_req: Request, res: Response) => {
+export const getAllExperience = async (c: Context<AppEnv>) => {
     try {
         const experience = await getAllExperienceService();
-        res.status(200).json(experience);
+        return c.json(experience, 200);
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Internal Server Error';
-        res.status(500).json({ error: message });
+        return c.json({ error: message }, 500);
     }
 };
 
 // GET /api/experience/:experienceId
-export const getExperienceById = async (req: Request, res: Response) => {
-    const experienceId = parseInt(req.params.experienceId as string);
+export const getExperienceById = async (c: Context<AppEnv>) => {
+    const experienceId = parseInt(c.req.param('experienceId') ?? '');
     if (isNaN(experienceId)) {
-        res.status(400).json({ error: 'Invalid experience ID' });
-        return;
+        return c.json({ error: 'Invalid experience ID' }, 400);
     }
     try {
         const entry = await getExperienceByIdService(experienceId);
         if (!entry) {
-            res.status(404).json({ error: 'Experience entry not found' });
-            return;
+            return c.json({ error: 'Experience entry not found' }, 404);
         }
-        res.status(200).json(entry);
+        return c.json(entry, 200);
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Internal Server Error';
-        res.status(500).json({ error: message });
+        return c.json({ error: message }, 500);
     }
 };
 
 // POST /api/experience
-export const createExperience = async (req: Request, res: Response) => {
-    const { company, role, location, startDate, endDate, bullets, order } = req.body;
+export const createExperience = async (c: Context<AppEnv>) => {
+    const { company, role, location, startDate, endDate, bullets, order } = await c.req.json();
     if (!company || !role || !startDate) {
-        res.status(400).json({ error: 'Company, role, and startDate are required' });
-        return;
+        return c.json({ error: 'Company, role, and startDate are required' }, 400);
     }
     try {
         const result = await createExperienceService({ company, role, location, startDate, endDate, bullets, order });
-        res.status(201).json({ message: result });
+        return c.json({ message: result }, 201);
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Internal Server Error';
-        res.status(500).json({ error: message });
+        return c.json({ error: message }, 500);
     }
 };
 
 // PUT /api/experience/:experienceId
-export const updateExperience = async (req: Request, res: Response) => {
-    const experienceId = parseInt(req.params.experienceId as string);
+export const updateExperience = async (c: Context<AppEnv>) => {
+    const experienceId = parseInt(c.req.param('experienceId') ?? '');
     if (isNaN(experienceId)) {
-        res.status(400).json({ error: 'Invalid experience ID' });
-        return;
+        return c.json({ error: 'Invalid experience ID' }, 400);
     }
-    const { company, role, location, startDate, endDate, bullets, order } = req.body;
+    const { company, role, location, startDate, endDate, bullets, order } = await c.req.json();
     if (!company || !role || !startDate) {
-        res.status(400).json({ error: 'Company, role, and startDate are required' });
-        return;
+        return c.json({ error: 'Company, role, and startDate are required' }, 400);
     }
     try {
         const result = await updateExperienceService(experienceId, { company, role, location, startDate, endDate, bullets, order });
-        res.status(200).json({ message: result });
+        return c.json({ message: result }, 200);
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Internal Server Error';
-        res.status(500).json({ error: message });
+        return c.json({ error: message }, 500);
     }
 };
 
 // DELETE /api/experience/:experienceId
-export const deleteExperience = async (req: Request, res: Response) => {
-    const experienceId = parseInt(req.params.experienceId as string);
+export const deleteExperience = async (c: Context<AppEnv>) => {
+    const experienceId = parseInt(c.req.param('experienceId') ?? '');
     if (isNaN(experienceId)) {
-        res.status(400).json({ error: 'Invalid experience ID' });
-        return;
+        return c.json({ error: 'Invalid experience ID' }, 400);
     }
     try {
         const result = await deleteExperienceService(experienceId);
-        res.status(200).json({ message: result });
+        return c.json({ message: result }, 200);
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Internal Server Error';
-        res.status(500).json({ error: message });
+        return c.json({ error: message }, 500);
     }
 };

@@ -1,64 +1,57 @@
-import path from 'path';
-import multer from 'multer';
-import { Request, Response, NextFunction } from 'express';
-import cloudinary from '../config/cloudinary';
+import type { Context } from 'hono';
+import { uploadToCloudinary, type CloudinaryEnv } from '../config/cloudinary';
 
-// Store file in memory, then stream to Cloudinary (compatible with cloudinary v2)
-const memoryStorage = multer.memoryStorage();
+const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/svg+xml', 'image/gif'];
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024; // 5MB
+const MAX_PDF_BYTES = 10 * 1024 * 1024; // 10MB
 
-export const upload = multer({
-    storage: memoryStorage,
-    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
-    fileFilter: (_req, file, cb) => {
-        const allowed = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/svg+xml', 'image/gif'];
-        if (allowed.includes(file.mimetype)) {
-            cb(null, true);
-        } else {
-            cb(new Error('Invalid file type. Only jpg, png, webp, svg, gif are allowed.'));
+// Pulls a single named file out of a multipart/form-data body and validates it.
+// Returns null (and writes a 400 response via `onError`) if validation fails.
+export const readUploadedFile = async (
+    c: Context,
+    fieldName: string,
+    kind: 'image' | 'pdf'
+): Promise<File | Response> => {
+    const body = await c.req.parseBody();
+    const file = body[fieldName];
+
+    if (!(file instanceof File)) {
+        return c.json({ error: `No ${kind} file provided` }, 400);
+    }
+
+    if (kind === 'image') {
+        if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+            return c.json({ error: 'Invalid file type. Only jpg, png, webp, svg, gif are allowed.' }, 400);
         }
-    },
-});
-
-export const uploadPdf = multer({
-    storage: memoryStorage,
-    limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
-    fileFilter: (_req, file, cb) => {
-        if (file.mimetype === 'application/pdf') {
-            cb(null, true);
-        } else {
-            cb(new Error('Invalid file type. Only PDF files are allowed.'));
+        if (file.size > MAX_IMAGE_BYTES) {
+            return c.json({ error: 'Image exceeds 5MB limit' }, 400);
         }
-    },
-});
-
-// Call this after upload.single() / uploadPdf.single() to push the buffer to Cloudinary.
-// Pass resourceType 'raw' for PDFs, default 'image' for images.
-// Attaches the Cloudinary URL to req.file.path for controllers to read.
-export const uploadToCloudinary = (folder = 'portfolio', resourceType: 'image' | 'raw' | 'video' | 'auto' = 'image') =>
-    async (req: Request, res: Response, next: NextFunction) => {
-        if (!req.file) return next();
-        try {
-            const result = await new Promise<any>((resolve, reject) => {
-                const stream = cloudinary.uploader.upload_stream(
-                    {
-                        folder,
-                        resource_type: resourceType,
-                        type: 'upload',
-                        ...(resourceType === 'raw' && { access_mode: 'public' }),
-                        public_id: `${Date.now()}-${req.file!.fieldname}${resourceType === 'raw' ? path.extname(req.file!.originalname) : ''}`,
-                        ...(resourceType === 'image' && { transformation: [{ quality: 'auto', fetch_format: 'auto' }] }),
-                    },
-                    (error, result) => {
-                        if (error) reject(error);
-                        else resolve(result);
-                    }
-                );
-                stream.end(req.file!.buffer);
-            });
-            // Attach the URL so controllers can read it as req.file.path
-            (req.file as any).path = result.secure_url;
-            next();
-        } catch (error) {
-            next(error);
+    } else {
+        if (file.type !== 'application/pdf') {
+            return c.json({ error: 'Invalid file type. Only PDF files are allowed.' }, 400);
         }
-    };
+        if (file.size > MAX_PDF_BYTES) {
+            return c.json({ error: 'PDF exceeds 10MB limit' }, 400);
+        }
+    }
+
+    return file;
+};
+
+// Uploads an already-validated file to Cloudinary and returns its secure URL.
+// `resourceType` 'raw' is used for PDFs; images use 'image' with auto quality/format.
+export const uploadFileToCloudinary = (
+    env: CloudinaryEnv,
+    file: File,
+    folder: string,
+    fieldName: string,
+    resourceType: 'image' | 'raw' = 'image'
+) => {
+    const ext = resourceType === 'raw' && file.name.includes('.') ? `.${file.name.split('.').pop()}` : '';
+    return uploadToCloudinary(env, file, {
+        folder,
+        resourceType,
+        publicId: `${Date.now()}-${fieldName}${ext}`,
+        transformation: resourceType === 'image' ? 'q_auto,f_auto' : undefined,
+    });
+};

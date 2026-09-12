@@ -1,0 +1,4 @@
+DATABASE_URL=postgresql://user:password@host/dbname?sslmode=require
+JWT_SECRET=your_super_secret_key_min_32_chars
+CLOUDINARY_API_KEY=your_api_key
+CLOUDINARY_API_SECRET=your_api_secret

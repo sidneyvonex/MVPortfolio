@@ -1,21 +1,17 @@
-import { Request, Response, NextFunction } from 'express';
+import type { Context, Next } from 'hono';
 import jwt from 'jsonwebtoken';
+import type { AppEnv } from '../types/env';
 
-export interface AuthRequest extends Request {
-    userId?: number;
-}
-
-export const authenticate = (req: AuthRequest, res: Response, next: NextFunction) => {
-    const token = req.headers.authorization?.split(' ')[1];
+export const authenticate = async (c: Context<AppEnv>, next: Next) => {
+    const token = c.req.header('Authorization')?.split(' ')[1];
     if (!token) {
-        res.status(401).json({ error: 'Unauthorized - no token provided' });
-        return;
+        return c.json({ error: 'Unauthorized - no token provided' }, 401);
     }
     try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as { userId: number };
-        req.userId = decoded.userId;
-        next();
+        const decoded = jwt.verify(token, c.env.JWT_SECRET) as { userId: number };
+        c.set('userId', decoded.userId);
+        await next();
     } catch {
-        res.status(401).json({ error: 'Unauthorized - invalid token' });
+        return c.json({ error: 'Unauthorized - invalid token' }, 401);
     }
 };

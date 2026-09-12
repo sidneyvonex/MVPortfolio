@@ -1,10 +1,12 @@
-import { Request, Response } from 'express';
+import type { Context } from 'hono';
+import type { AppEnv } from '../types/env';
 import { registerUserService, loginUserService } from './user.service';
 import db from '../db/index';
 import { siteSettingsTable } from '../db/schema';
-import cloudinary from '../config/cloudinary';
+import { getPrivateDownloadUrl } from '../config/cloudinary';
+import { readUploadedFile, uploadFileToCloudinary } from '../Middleware/upload';
 
-const normalizeResumeUrl = (rawUrl: string) => {
+const normalizeResumeUrl = (rawUrl: string, cloudName?: string) => {
     const url = rawUrl.trim();
     if (!url) return url;
 
@@ -12,7 +14,6 @@ const normalizeResumeUrl = (rawUrl: string) => {
         return url;
     }
 
-    const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
     if (cloudName && (url.startsWith('/upload/') || url.startsWith('upload/'))) {
         const normalizedPath = url.startsWith('/') ? url : `/${url}`;
         return `https://res.cloudinary.com/${cloudName}/raw${normalizedPath}`;
@@ -21,7 +22,7 @@ const normalizeResumeUrl = (rawUrl: string) => {
     return url;
 };
 
-const fetchResumeBytes = async (resumeUrl: string) => {
+const fetchResumeBytes = async (c: Context<AppEnv>, resumeUrl: string): Promise<ArrayBuffer> => {
     let effectiveUrl = resumeUrl;
     let upstream = await fetch(effectiveUrl, {
         redirect: 'follow',
@@ -37,10 +38,9 @@ const fetchResumeBytes = async (resumeUrl: string) => {
         const clean = decodeURIComponent(pathPart).split('?')[0];
         const ext = clean.includes('.') ? clean.split('.').pop() ?? 'pdf' : 'pdf';
         const publicId = clean;
-        const signedUrl = cloudinary.utils.private_download_url(publicId, ext, {
-            resource_type: 'raw',
-            type: 'upload',
-            expires_at: Math.floor(Date.now() / 1000) + 120,
+        const signedUrl = getPrivateDownloadUrl(c.env, publicId, ext, {
+            resourceType: 'raw',
+            expiresAt: Math.floor(Date.now() / 1000) + 120,
         });
 
         effectiveUrl = signedUrl;
@@ -57,53 +57,50 @@ const fetchResumeBytes = async (resumeUrl: string) => {
         throw new Error(`Upstream returned ${upstream.status}`);
     }
 
-    return Buffer.from(await upstream.arrayBuffer());
+    return upstream.arrayBuffer();
 };
 
 // POST /api/auth/register
-export const register = async (req: Request, res: Response) => {
-    const { email, password } = req.body;
+export const register = async (c: Context<AppEnv>) => {
+    const { email, password } = await c.req.json();
     if (!email || !password) {
-        res.status(400).json({ error: 'Email and password are required' });
-        return;
+        return c.json({ error: 'Email and password are required' }, 400);
     }
     if (password.length < 8) {
-        res.status(400).json({ error: 'Password must be at least 8 characters' });
-        return;
+        return c.json({ error: 'Password must be at least 8 characters' }, 400);
     }
     try {
         const result = await registerUserService(email, password);
-        res.status(201).json({ message: result });
+        return c.json({ message: result }, 201);
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Internal Server Error';
-        res.status(400).json({ error: message });
+        return c.json({ error: message }, 400);
     }
 };
 
 // POST /api/auth/login
-export const login = async (req: Request, res: Response) => {
-    const { email, password } = req.body;
+export const login = async (c: Context<AppEnv>) => {
+    const { email, password } = await c.req.json();
     if (!email || !password) {
-        res.status(400).json({ error: 'Email and password are required' });
-        return;
+        return c.json({ error: 'Email and password are required' }, 400);
     }
     try {
-        const token = await loginUserService(email, password);
-        res.status(200).json({ token });
+        const token = await loginUserService(email, password, c.env.JWT_SECRET);
+        return c.json({ token }, 200);
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Internal Server Error';
-        res.status(401).json({ error: message });
+        return c.json({ error: message }, 401);
     }
 };
 
-// POST /api/auth/upload/hero  — upload hero section image to Cloudinary and save URL
-export const uploadHeroImage = async (req: Request, res: Response) => {
-    const imageUrl = (req.file as any)?.path;
-    if (!imageUrl) {
-        res.status(400).json({ error: 'No image file provided' });
-        return;
-    }
+// POST /api/auth/upload/hero — upload hero section image to Cloudinary and save URL
+export const uploadHeroImage = async (c: Context<AppEnv>) => {
+    const file = await readUploadedFile(c, 'heroImage', 'image');
+    if (file instanceof Response) return file;
+
     try {
+        const uploaded = await uploadFileToCloudinary(c.env, file, 'portfolio/hero', 'heroImage');
+        const imageUrl = uploaded.secure_url;
         await db
             .insert(siteSettingsTable)
             .values({ key: 'heroImageUrl', value: imageUrl })
@@ -111,39 +108,34 @@ export const uploadHeroImage = async (req: Request, res: Response) => {
                 target: siteSettingsTable.key,
                 set: { value: imageUrl, updatedAt: new Date() },
             });
-        res.status(200).json({
-            message: 'Hero image uploaded successfully',
-            imageUrl,
-        });
+        return c.json({ message: 'Hero image uploaded successfully', imageUrl }, 200);
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Internal Server Error';
-        res.status(500).json({ error: message });
+        return c.json({ error: message }, 500);
     }
 };
 
 // GET /api/settings/hero — fetch the saved hero image URL
-export const getHeroImageUrl = async (_req: Request, res: Response) => {
+export const getHeroImageUrl = async (c: Context<AppEnv>) => {
     try {
         const setting = await db.query.siteSettingsTable.findFirst({
             where: (t, { eq }) => eq(t.key, 'heroImageUrl'),
         });
         if (!setting) {
-            res.status(404).json({ error: 'No hero image set yet' });
-            return;
+            return c.json({ error: 'No hero image set yet' }, 404);
         }
-        res.status(200).json({ imageUrl: setting.value });
+        return c.json({ imageUrl: setting.value }, 200);
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Internal Server Error';
-        res.status(500).json({ error: message });
+        return c.json({ error: message }, 500);
     }
 };
 
 // POST /api/settings/resume — save resume URL (admin only)
-export const setResumeUrl = async (req: Request, res: Response) => {
-    const { url } = req.body;
+export const setResumeUrl = async (c: Context<AppEnv>) => {
+    const { url } = await c.req.json();
     if (!url) {
-        res.status(400).json({ error: 'url is required' });
-        return;
+        return c.json({ error: 'url is required' }, 400);
     }
     try {
         await db
@@ -153,36 +145,34 @@ export const setResumeUrl = async (req: Request, res: Response) => {
                 target: siteSettingsTable.key,
                 set: { value: url, updatedAt: new Date() },
             });
-        res.status(200).json({ message: 'Resume URL saved', url });
+        return c.json({ message: 'Resume URL saved', url }, 200);
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Internal Server Error';
-        res.status(500).json({ error: message });
+        return c.json({ error: message }, 500);
     }
 };
 
 // GET /api/settings/resume — fetch resume URL (public)
-export const getResumeUrl = async (_req: Request, res: Response) => {
+export const getResumeUrl = async (c: Context<AppEnv>) => {
     try {
         const setting = await db.query.siteSettingsTable.findFirst({
             where: (t, { eq }) => eq(t.key, 'resumeUrl'),
         });
         if (!setting) {
-            res.status(404).json({ error: 'No resume URL set yet' });
-            return;
+            return c.json({ error: 'No resume URL set yet' }, 404);
         }
-        res.status(200).json({ url: normalizeResumeUrl(setting.value) });
+        return c.json({ url: normalizeResumeUrl(setting.value, c.env.CLOUDINARY_CLOUD_NAME) }, 200);
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Internal Server Error';
-        res.status(500).json({ error: message });
+        return c.json({ error: message }, 500);
     }
 };
 
 // POST /api/settings/tagline — save tagline (admin only)
-export const setTagline = async (req: Request, res: Response) => {
-    const { tagline } = req.body;
+export const setTagline = async (c: Context<AppEnv>) => {
+    const { tagline } = await c.req.json();
     if (!tagline) {
-        res.status(400).json({ error: 'tagline is required' });
-        return;
+        return c.json({ error: 'tagline is required' }, 400);
     }
     try {
         await db
@@ -192,51 +182,49 @@ export const setTagline = async (req: Request, res: Response) => {
                 target: siteSettingsTable.key,
                 set: { value: tagline, updatedAt: new Date() },
             });
-        res.status(200).json({ message: 'Tagline saved', tagline });
+        return c.json({ message: 'Tagline saved', tagline }, 200);
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Internal Server Error';
-        res.status(500).json({ error: message });
+        return c.json({ error: message }, 500);
     }
 };
 
 // GET /api/settings/tagline — fetch tagline (public)
-export const getTagline = async (_req: Request, res: Response) => {
+export const getTagline = async (c: Context<AppEnv>) => {
     try {
         const setting = await db.query.siteSettingsTable.findFirst({
             where: (t, { eq }) => eq(t.key, 'tagline'),
         });
         if (!setting) {
-            res.status(404).json({ error: 'No tagline set yet' });
-            return;
+            return c.json({ error: 'No tagline set yet' }, 404);
         }
-        res.status(200).json({ tagline: setting.value });
+        return c.json({ tagline: setting.value }, 200);
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Internal Server Error';
-        res.status(500).json({ error: message });
+        return c.json({ error: message }, 500);
     }
 };
 
 // GET /api/settings — return all settings as a single object (public)
-export const getAllSettings = async (_req: Request, res: Response) => {
+export const getAllSettings = async (c: Context<AppEnv>) => {
     try {
         const rows = await db.query.siteSettingsTable.findMany();
         const settings = rows.reduce((acc, row) => {
-            acc[row.key] = row.key === 'resumeUrl' ? normalizeResumeUrl(row.value) : row.value;
+            acc[row.key] = row.key === 'resumeUrl' ? normalizeResumeUrl(row.value, c.env.CLOUDINARY_CLOUD_NAME) : row.value;
             return acc;
         }, {} as Record<string, string>);
-        res.status(200).json(settings);
+        return c.json(settings, 200);
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Internal Server Error';
-        res.status(500).json({ error: message });
+        return c.json({ error: message }, 500);
     }
 };
 
 // PUT /api/settings — batch-upsert any settings keys (admin only)
-export const updateSettings = async (req: Request, res: Response) => {
-    const updates = req.body as Record<string, string>;
+export const updateSettings = async (c: Context<AppEnv>) => {
+    const updates = (await c.req.json()) as Record<string, string>;
     if (!updates || typeof updates !== 'object' || Array.isArray(updates) || Object.keys(updates).length === 0) {
-        res.status(400).json({ error: 'Body must be a non-empty object of key-value settings' });
-        return;
+        return c.json({ error: 'Body must be a non-empty object of key-value settings' }, 400);
     }
     try {
         for (const [key, value] of Object.entries(updates)) {
@@ -248,21 +236,21 @@ export const updateSettings = async (req: Request, res: Response) => {
                     set: { value: String(value), updatedAt: new Date() },
                 });
         }
-        res.status(200).json({ message: 'Settings updated', updated: Object.keys(updates) });
+        return c.json({ message: 'Settings updated', updated: Object.keys(updates) }, 200);
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Internal Server Error';
-        res.status(500).json({ error: message });
+        return c.json({ error: message }, 500);
     }
 };
 
 // POST /api/settings/resume/upload — upload PDF resume to Cloudinary (admin only)
-export const uploadResumePdf = async (req: Request, res: Response) => {
-    const pdfUrl = (req.file as any)?.path;
-    if (!pdfUrl) {
-        res.status(400).json({ error: 'No PDF file provided' });
-        return;
-    }
+export const uploadResumePdf = async (c: Context<AppEnv>) => {
+    const file = await readUploadedFile(c, 'resume', 'pdf');
+    if (file instanceof Response) return file;
+
     try {
+        const uploaded = await uploadFileToCloudinary(c.env, file, 'portfolio/resumes', 'resume', 'raw');
+        const pdfUrl = uploaded.secure_url;
         await db
             .insert(siteSettingsTable)
             .values({ key: 'resumeUrl', value: pdfUrl })
@@ -270,42 +258,37 @@ export const uploadResumePdf = async (req: Request, res: Response) => {
                 target: siteSettingsTable.key,
                 set: { value: pdfUrl, updatedAt: new Date() },
             });
-        res.status(200).json({ message: 'Resume uploaded successfully', url: pdfUrl });
+        return c.json({ message: 'Resume uploaded successfully', url: pdfUrl }, 200);
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Internal Server Error';
-        res.status(500).json({ error: message });
+        return c.json({ error: message }, 500);
     }
 };
 
 // GET /api/settings/resume/download — stream the stored PDF for download or inline preview
-export const downloadResume = async (req: Request, res: Response) => {
+export const downloadResume = async (c: Context<AppEnv>, mode: 'attachment' | 'inline') => {
     try {
         const setting = await db.query.siteSettingsTable.findFirst({
             where: (t, { eq }) => eq(t.key, 'resumeUrl'),
         });
-        const resumeUrl = setting?.value ? normalizeResumeUrl(setting.value) : undefined;
+        const resumeUrl = setting?.value ? normalizeResumeUrl(setting.value, c.env.CLOUDINARY_CLOUD_NAME) : undefined;
         if (!resumeUrl) {
-            res.status(404).json({ error: 'Resume not found' });
-            return;
+            return c.json({ error: 'Resume not found' }, 404);
         }
 
-        const mode = req.query.mode === 'inline' ? 'inline' : 'attachment';
-        const bytes = await fetchResumeBytes(resumeUrl);
+        const requestedMode = c.req.query('mode') === 'inline' ? 'inline' : mode;
+        const bytes = await fetchResumeBytes(c, resumeUrl);
 
-        res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `${mode}; filename="resume.pdf"`);
-        res.setHeader('Content-Length', String(bytes.length));
-        res.status(200).send(bytes);
+        return new Response(bytes, {
+            status: 200,
+            headers: {
+                'Content-Type': 'application/pdf',
+                'Content-Disposition': `${requestedMode}; filename="resume.pdf"`,
+                'Content-Length': String(bytes.byteLength),
+            },
+        });
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Internal Server Error';
-        if (!res.headersSent) {
-            res.status(502).json({ error: message });
-        }
+        return c.json({ error: message }, 502);
     }
-};
-
-// GET /api/settings/resume/preview — proxy the stored PDF for inline browser preview
-export const previewResume = async (req: Request, res: Response) => {
-    req.query.mode = 'inline';
-    return downloadResume(req, res);
 };

@@ -1,122 +1,115 @@
-import { Request, Response } from "express";
-import { getAllCCommunitiesService, getCommunityByIdService, createCommunityService, updateCommunityService, deleteCommunityService } from "./community.services";
+import type { Context } from 'hono';
+import type { AppEnv } from '../types/env';
+import { getAllCCommunitiesService, getCommunityByIdService, createCommunityService, updateCommunityService, deleteCommunityService } from './community.services';
+import { readUploadedFile, uploadFileToCloudinary } from '../Middleware/upload';
 
-// GET /api/community
-export const getAllCommunities = async (req: Request, res: Response) => {
+// GET /api/communities
+export const getAllCommunities = async (c: Context<AppEnv>) => {
     try {
         const existingCommunities = await getAllCCommunitiesService();
         if (!existingCommunities || existingCommunities.length === 0) {
-            res.status(404).json({ message: "No communities found" });
-            return;
+            return c.json({ message: 'No communities found' }, 404);
         }
-        res.status(200).json(existingCommunities);
+        return c.json(existingCommunities, 200);
     } catch (error) {
-        console.error("Error fetching communities:", error);
-        const message = error instanceof Error ? error.message : "Internal Server Error";
-        res.status(500).json({ error: message });
+        console.error('Error fetching communities:', error);
+        const message = error instanceof Error ? error.message : 'Internal Server Error';
+        return c.json({ error: message }, 500);
     }
 };
 
-// GET /api/community/:communityId
-export const getCommunityById = async (req: Request, res: Response) => {
-    const communityId = parseInt(req.params.communityId as string);
+// GET /api/communities/:communityId
+export const getCommunityById = async (c: Context<AppEnv>) => {
+    const communityId = parseInt(c.req.param('communityId') ?? '');
     if (isNaN(communityId)) {
-        res.status(400).json({ error: "Invalid community ID" });
-        return;
+        return c.json({ error: 'Invalid community ID' }, 400);
     }
     try {
         const communityData = await getCommunityByIdService(communityId);
         if (!communityData) {
-            res.status(404).json({ error: "Community not found" });
-            return;
+            return c.json({ error: 'Community not found' }, 404);
         }
-        res.status(200).json(communityData);
+        return c.json(communityData, 200);
     } catch (error) {
-        console.error("Error fetching community:", error);
-        const message = error instanceof Error ? error.message : "Internal Server Error";
-        res.status(500).json({ error: message });
+        console.error('Error fetching community:', error);
+        const message = error instanceof Error ? error.message : 'Internal Server Error';
+        return c.json({ error: message }, 500);
     }
 };
 
-// POST /api/community
-export const createCommunity = async (req: Request, res: Response) => {
-    const { name, role, description, logoUrl, bioUrl, order } = req.body;
+// POST /api/communities
+export const createCommunity = async (c: Context<AppEnv>) => {
+    const { name, role, description, logoUrl, bioUrl, order } = await c.req.json();
     if (!name) {
-        res.status(400).json({ error: "Name is required" });
-        return;
+        return c.json({ error: 'Name is required' }, 400);
     }
     try {
         const result = await createCommunityService({ name, role, description, logoUrl, bioUrl, order });
-        res.status(201).json({ message: result });
+        return c.json({ message: result }, 201);
     } catch (error) {
-        console.error("Error creating community:", error);
-        const message = error instanceof Error ? error.message : "Internal Server Error";
-        res.status(500).json({ error: message });
+        console.error('Error creating community:', error);
+        const message = error instanceof Error ? error.message : 'Internal Server Error';
+        return c.json({ error: message }, 500);
     }
 };
 
-// PUT /api/community/:communityId
-export const updateCommunity = async (req: Request, res: Response) => {
-    const communityId = parseInt(req.params.communityId as string);
+// PUT /api/communities/:communityId
+export const updateCommunity = async (c: Context<AppEnv>) => {
+    const communityId = parseInt(c.req.param('communityId') ?? '');
     if (isNaN(communityId)) {
-        res.status(400).json({ error: "Invalid community ID" });
-        return;
+        return c.json({ error: 'Invalid community ID' }, 400);
     }
-    const { name, role, description, logoUrl, bioUrl, order } = req.body;
+    const { name, role, description, logoUrl, bioUrl, order } = await c.req.json();
     if (!name) {
-        res.status(400).json({ error: "Name is required" });
-        return;
+        return c.json({ error: 'Name is required' }, 400);
     }
     try {
         const result = await updateCommunityService(communityId, { name, role, description, logoUrl, bioUrl, order });
-        res.status(200).json({ message: result });
+        return c.json({ message: result }, 200);
     } catch (error) {
-        console.error("Error updating community:", error);
-        const message = error instanceof Error ? error.message : "Internal Server Error";
-        res.status(500).json({ error: message });
+        console.error('Error updating community:', error);
+        const message = error instanceof Error ? error.message : 'Internal Server Error';
+        return c.json({ error: message }, 500);
     }
 };
 
-// DELETE /api/community/:communityId
-export const deleteCommunity = async (req: Request, res: Response) => {
-    const communityId = parseInt(req.params.communityId as string);
+// DELETE /api/communities/:communityId
+export const deleteCommunity = async (c: Context<AppEnv>) => {
+    const communityId = parseInt(c.req.param('communityId') ?? '');
     if (isNaN(communityId)) {
-        res.status(400).json({ error: "Invalid community ID" });
-        return;
+        return c.json({ error: 'Invalid community ID' }, 400);
     }
     try {
         const result = await deleteCommunityService(communityId);
-        res.status(200).json({ message: result });
+        return c.json({ message: result }, 200);
     } catch (error) {
-        console.error("Error deleting community:", error);
-        const message = error instanceof Error ? error.message : "Internal Server Error";
-        res.status(500).json({ error: message });
+        console.error('Error deleting community:', error);
+        const message = error instanceof Error ? error.message : 'Internal Server Error';
+        return c.json({ error: message }, 500);
     }
 };
 
 // POST /api/communities/:communityId/logo — upload community logo to Cloudinary
-export const uploadCommunityLogo = async (req: Request, res: Response) => {
-    const communityId = parseInt(req.params.communityId as string);
+export const uploadCommunityLogo = async (c: Context<AppEnv>) => {
+    const communityId = parseInt(c.req.param('communityId') ?? '');
     if (isNaN(communityId)) {
-        res.status(400).json({ error: "Invalid community ID" });
-        return;
+        return c.json({ error: 'Invalid community ID' }, 400);
     }
-    const logoUrl = (req.file as any)?.path;
-    if (!logoUrl) {
-        res.status(400).json({ error: "No image file provided" });
-        return;
-    }
+    const file = await readUploadedFile(c, 'logo', 'image');
+    if (file instanceof Response) return file;
+
     try {
         const existing = await getCommunityByIdService(communityId);
         if (!existing) {
-            res.status(404).json({ error: "Community not found" });
-            return;
+            return c.json({ error: 'Community not found' }, 404);
         }
+        const uploaded = await uploadFileToCloudinary(c.env, file, 'portfolio/community', 'logo');
+        const logoUrl = uploaded.secure_url;
         const result = await updateCommunityService(communityId, { ...existing, logoUrl });
-        res.status(200).json({ message: result, logoUrl });
+        return c.json({ message: result, logoUrl }, 200);
     } catch (error) {
-        console.error("Error uploading community logo:", error);
-        const message = error instanceof Error ? error.message : "Internal Server Error";
-        res.status(500).json({ error: message });
+        console.error('Error uploading community logo:', error);
+        const message = error instanceof Error ? error.message : 'Internal Server Error';
+        return c.json({ error: message }, 500);
     }
 };

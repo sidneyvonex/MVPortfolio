@@ -1,4 +1,5 @@
-import { Request, Response } from 'express';
+import type { Context } from 'hono';
+import type { AppEnv } from '../types/env';
 import {
     getAllTestimonialsService,
     getTestimonialByIdService,
@@ -6,113 +7,106 @@ import {
     updateTestimonialService,
     deleteTestimonialService
 } from './Testimonials.service';
+import { readUploadedFile, uploadFileToCloudinary } from '../Middleware/upload';
 
 // GET /api/testimonials
-export const getAllTestimonials = async (_req: Request, res: Response) => {
+export const getAllTestimonials = async (c: Context<AppEnv>) => {
     try {
         const testimonials = await getAllTestimonialsService();
-        res.status(200).json(testimonials);
+        return c.json(testimonials, 200);
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Internal Server Error';
-        res.status(500).json({ error: message });
+        return c.json({ error: message }, 500);
     }
 };
 
 // GET /api/testimonials/:testimonialId
-export const getTestimonialById = async (req: Request, res: Response) => {
-    const testimonialId = parseInt(req.params.testimonialId as string);
+export const getTestimonialById = async (c: Context<AppEnv>) => {
+    const testimonialId = parseInt(c.req.param('testimonialId') ?? '');
     if (isNaN(testimonialId)) {
-        res.status(400).json({ error: 'Invalid testimonial ID' });
-        return;
+        return c.json({ error: 'Invalid testimonial ID' }, 400);
     }
     try {
         const testimonial = await getTestimonialByIdService(testimonialId);
         if (!testimonial) {
-            res.status(404).json({ error: 'Testimonial not found' });
-            return;
+            return c.json({ error: 'Testimonial not found' }, 404);
         }
-        res.status(200).json(testimonial);
+        return c.json(testimonial, 200);
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Internal Server Error';
-        res.status(500).json({ error: message });
+        return c.json({ error: message }, 500);
     }
 };
 
 // POST /api/testimonials
-export const createTestimonial = async (req: Request, res: Response) => {
-    const { name, role, avatarUrl, message, rating, order } = req.body;
+export const createTestimonial = async (c: Context<AppEnv>) => {
+    const { name, role, avatarUrl, message, rating, order } = await c.req.json();
     if (!name || !role || !message) {
-        res.status(400).json({ error: 'Name, role, and message are required' });
-        return;
+        return c.json({ error: 'Name, role, and message are required' }, 400);
     }
     try {
         const result = await createTestimonialService({ name, role, avatarUrl, message, rating, order });
-        res.status(201).json({ message: result });
+        return c.json({ message: result }, 201);
     } catch (error) {
         const msg = error instanceof Error ? error.message : 'Internal Server Error';
-        res.status(500).json({ error: msg });
+        return c.json({ error: msg }, 500);
     }
 };
 
 // PUT /api/testimonials/:testimonialId
-export const updateTestimonial = async (req: Request, res: Response) => {
-    const testimonialId = parseInt(req.params.testimonialId as string);
+export const updateTestimonial = async (c: Context<AppEnv>) => {
+    const testimonialId = parseInt(c.req.param('testimonialId') ?? '');
     if (isNaN(testimonialId)) {
-        res.status(400).json({ error: 'Invalid testimonial ID' });
-        return;
+        return c.json({ error: 'Invalid testimonial ID' }, 400);
     }
-    const { name, role, avatarUrl, message, rating, order } = req.body;
+    const { name, role, avatarUrl, message, rating, order } = await c.req.json();
     if (!name || !role || !message) {
-        res.status(400).json({ error: 'Name, role, and message are required' });
-        return;
+        return c.json({ error: 'Name, role, and message are required' }, 400);
     }
     try {
         const result = await updateTestimonialService(testimonialId, { name, role, avatarUrl, message, rating, order });
-        res.status(200).json({ message: result });
+        return c.json({ message: result }, 200);
     } catch (error) {
         const msg = error instanceof Error ? error.message : 'Internal Server Error';
-        res.status(500).json({ error: msg });
+        return c.json({ error: msg }, 500);
     }
 };
 
 // DELETE /api/testimonials/:testimonialId
-export const deleteTestimonial = async (req: Request, res: Response) => {
-    const testimonialId = parseInt(req.params.testimonialId as string);
+export const deleteTestimonial = async (c: Context<AppEnv>) => {
+    const testimonialId = parseInt(c.req.param('testimonialId') ?? '');
     if (isNaN(testimonialId)) {
-        res.status(400).json({ error: 'Invalid testimonial ID' });
-        return;
+        return c.json({ error: 'Invalid testimonial ID' }, 400);
     }
     try {
         const result = await deleteTestimonialService(testimonialId);
-        res.status(200).json({ message: result });
+        return c.json({ message: result }, 200);
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Internal Server Error';
-        res.status(500).json({ error: message });
+        return c.json({ error: message }, 500);
     }
 };
 
-// POST /api/testimonials/:testimonialId/avatar  — upload avatar via Cloudinary
-export const uploadTestimonialAvatar = async (req: Request, res: Response) => {
-    const testimonialId = parseInt(req.params.testimonialId as string);
+// POST /api/testimonials/:testimonialId/avatar — upload avatar via Cloudinary
+export const uploadTestimonialAvatar = async (c: Context<AppEnv>) => {
+    const testimonialId = parseInt(c.req.param('testimonialId') ?? '');
     if (isNaN(testimonialId)) {
-        res.status(400).json({ error: 'Invalid testimonial ID' });
-        return;
+        return c.json({ error: 'Invalid testimonial ID' }, 400);
     }
-    const avatarUrl = (req.file as any)?.path;
-    if (!avatarUrl) {
-        res.status(400).json({ error: 'No image file provided' });
-        return;
-    }
+    const file = await readUploadedFile(c, 'avatar', 'image');
+    if (file instanceof Response) return file;
+
     try {
         const testimonial = await getTestimonialByIdService(testimonialId);
         if (!testimonial) {
-            res.status(404).json({ error: 'Testimonial not found' });
-            return;
+            return c.json({ error: 'Testimonial not found' }, 404);
         }
+        const uploaded = await uploadFileToCloudinary(c.env, file, 'portfolio/testimonials', 'avatar');
+        const avatarUrl = uploaded.secure_url;
         const result = await updateTestimonialService(testimonialId, { ...testimonial, avatarUrl });
-        res.status(200).json({ message: result, avatarUrl });
+        return c.json({ message: result, avatarUrl }, 200);
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Internal Server Error';
-        res.status(500).json({ error: message });
+        return c.json({ error: message }, 500);
     }
 };

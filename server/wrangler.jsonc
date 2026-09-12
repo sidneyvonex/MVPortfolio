@@ -1,0 +1,14 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "mvportfolio-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2025-04-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "vars": {
+    "CLIENT_URL": "https://client.sidneygithu.workers.dev",
+    "CLOUDINARY_CLOUD_NAME": "diia0dapa"
+  },
+  "observability": {
+    "enabled": true
+  }
+}

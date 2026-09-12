@@ -7,7 +7,7 @@ This document covers everything needed to run the portfolio project locally, fro
 | Tool | Minimum Version | Notes |
 |------|----------------|-------|
 | Node.js | 20 | LTS recommended |
-| pnpm | 9 | Used in both workspaces |
+| npm | 10+ | Used in both workspaces |
 | Git | any | |
 
 An account on the following external services is required:
@@ -33,29 +33,26 @@ Both workspaces have separate `package.json` files. Install them independently.
 ```bash
 # Server
 cd server
-pnpm install
+npm install
 
 # Client
 cd ../client
-pnpm install
+npm install
 ```
 
 ---
 
 ## 3. Configure the server environment
 
-Create `server/.env` by copying the example:
+The API runs as a Cloudflare Worker (Hono), so its secrets live in **`server/.dev.vars`** for local dev (Wrangler's equivalent of `.env`) rather than a plain `.env`:
 
 ```bash
-cp server/.env.example server/.env
+cp server/.dev.vars.example server/.dev.vars
 ```
 
 Then fill in every value — none have safe defaults in production:
 
 ```env
-# Express
-PORT=5000
-
 # Neon PostgreSQL
 # Copy the connection string from your Neon project dashboard > Connection Details
 # Make sure to include ?sslmode=require&channel_binding=require at the end
@@ -63,17 +60,17 @@ DATABASE_URL=postgresql://<user>:<password>@<host>.neon.tech/<dbname>?sslmode=re
 
 # Cloudinary
 # Find these in your Cloudinary dashboard > Settings > API Keys
-CLOUDINARY_CLOUD_NAME=your_cloud_name
 CLOUDINARY_API_KEY=your_api_key
 CLOUDINARY_API_SECRET=your_api_secret
 
 # JWT
 # Use a long, random string — e.g. openssl rand -base64 48
 JWT_SECRET=replace_with_a_long_random_secret
-
-# CORS — the URL of your frontend dev server
-CLIENT_URL=http://localhost:5173
 ```
+
+`CLOUDINARY_CLOUD_NAME` and `CLIENT_URL` (used for CORS) aren't secret — they live as plain `vars` in `server/wrangler.jsonc`. Edit that file directly to set your Cloudinary cloud name and, before deploying, your production frontend URL.
+
+`server/.env.example` still exists separately for the Node-only tooling (`drizzle-kit`, `seed`, `create-admin`) — copy it to `server/.env` and set `DATABASE_URL` there too, since those scripts run outside the Worker.
 
 ---
 
@@ -88,9 +85,9 @@ cp client/.env.example client/.env   # or create manually
 Contents:
 
 ```env
-# Full base URL of the Express API (including /api)
+# Full base URL of the Worker API (including /api)
 # During local development this value is also used to configure the Vite proxy
-VITE_API_URL=http://localhost:5000/api
+VITE_API_URL=http://localhost:8787/api
 ```
 
 > **Important:** Do not set `VITE_API_URL` as a system/shell environment variable. A shell-level value overrides the `.env` file and may cause the client to bypass the proxy.
@@ -103,7 +100,7 @@ Drizzle manages the schema. Apply all migrations to your Neon database:
 
 ```bash
 cd server
-pnpm migrate
+npm run migrate
 ```
 
 This reads `drizzle.config.ts` and runs the SQL files in `src/drizzle/migrations/` against your `DATABASE_URL`.
@@ -116,7 +113,7 @@ A seed script inserts placeholder projects, skills, experience, education, testi
 
 ```bash
 cd server
-pnpm seed
+npm run seed
 ```
 
 Run this only once. If the database already has data the script may insert duplicates.
@@ -129,7 +126,7 @@ The admin panel is protected by a JWT. An admin account must be created before y
 
 ```bash
 cd server
-pnpm create-admin you@example.com YourSecurePassword123
+npm run create-admin you@example.com YourSecurePassword123
 ```
 
 - If the email already exists the password is updated instead.
@@ -142,62 +139,71 @@ pnpm create-admin you@example.com YourSecurePassword123
 
 Open two terminal windows or tabs.
 
-**Terminal 1 — API server** (runs on port 5000):
+**Terminal 1 — API Worker** (runs on port 8787 via `wrangler dev`):
 ```bash
 cd server
-pnpm dev
+npm run dev
 ```
 
 **Terminal 2 — Vite dev server** (runs on port 5173):
 ```bash
 cd client
-pnpm dev
+npm run dev
 ```
 
 Then open:
 
 - Portfolio site: http://localhost:5173
 - Admin login: http://localhost:5173/admin/login
-- API docs (Swagger): http://localhost:5000/api/docs
+- API docs (Swagger): http://localhost:8787/api/docs
 
 ---
 
-## 9. Build for production
+## 9. Deploy to Cloudflare
 
-```bash
-# Build the client (outputs to client/dist/)
-cd client
-pnpm build
+Both apps deploy to Cloudflare — the client to Pages (or Workers static assets), the API as its own Worker.
 
-# Compile the server (outputs to server/dist/)
-cd ../server
-pnpm build
-```
-
-To serve the compiled server:
-
+**API Worker:**
 ```bash
 cd server
-pnpm start
+npx wrangler secret put DATABASE_URL
+npx wrangler secret put JWT_SECRET
+npx wrangler secret put CLOUDINARY_API_KEY
+npx wrangler secret put CLOUDINARY_API_SECRET
+# edit CLIENT_URL and CLOUDINARY_CLOUD_NAME in wrangler.jsonc first, then:
+npm run deploy
 ```
 
-For deployment, serve the `client/dist/` folder from a static host (Vercel, Netlify, Cloudflare Pages) and deploy the server to a Node.js host (Railway, Render, Fly.io). Set the same environment variables on each platform.
+**Client (Cloudflare Pages):**
+```bash
+cd client
+# set VITE_API_URL to your deployed Worker's URL first
+npm run deploy
+```
+
+Both run comfortably on Cloudflare's free plan for a personal portfolio's traffic — see the CPU-time note in the environment variable reference below.
 
 ---
 
 ## Environment Variable Reference
 
-### server/.env
+### server/.dev.vars (secrets — `wrangler secret put` in production)
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `PORT` | No | Port the Express server listens on. Defaults to `5000`. |
 | `DATABASE_URL` | Yes | Full Neon/PostgreSQL connection string. |
-| `CLOUDINARY_CLOUD_NAME` | Yes | Cloudinary account cloud name. |
 | `CLOUDINARY_API_KEY` | Yes | Cloudinary API key. |
 | `CLOUDINARY_API_SECRET` | Yes | Cloudinary API secret. |
 | `JWT_SECRET` | Yes | Secret used to sign and verify JWT tokens. |
+
+### server/wrangler.jsonc `vars` (not secret)
+
+| Variable | Required | Description |
+|----------|----------|-------------|
 | `CLIENT_URL` | Yes | Frontend origin for CORS. Must match the exact URL the browser uses. |
+| `CLOUDINARY_CLOUD_NAME` | Yes | Cloudinary account cloud name. |
+
+> **Free plan note:** Workers on Cloudflare's free plan get 10ms of CPU time per request. Login/register hash passwords with bcrypt at cost factor 10 (tuned down from the original 12) specifically to stay under that budget — don't raise it without checking CPU usage in the dashboard.
 
 ### client/.env
 
@@ -219,4 +225,4 @@ The JWT token in `localStorage` under key `admin_token` has expired (7-day lifet
 The `DATABASE_URL` is missing `?sslmode=require` at the end. Neon requires SSL.
 
 **Cloudinary upload returns 400**
-Check that `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY` and `CLOUDINARY_API_SECRET` are all set and correct in `server/.env`.
+Check that `CLOUDINARY_CLOUD_NAME` (in `server/wrangler.jsonc`) and `CLOUDINARY_API_KEY`/`CLOUDINARY_API_SECRET` (in `server/.dev.vars`, or set via `wrangler secret put` in production) are all set and correct.
