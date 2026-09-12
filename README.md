@@ -2,6 +2,8 @@
 
 A production-ready personal portfolio with a CMS-style admin panel. All content — projects, skills, work experience, education, testimonials and site settings — is stored in a PostgreSQL database and editable through a protected admin UI without touching code.
 
+> **Note:** This `main` branch still runs the original Express API on a Node host (Azure App Service). A full migration to Cloudflare — the API rewritten on Hono/Cloudflare Workers, the client on Cloudflare Pages — has been completed and deployed, and lives on the [`cloudflare-migration`](../../tree/cloudflare-migration) branch pending review/merge. See that branch's README/SETUP/ARCHITECTURE docs for the new setup and deploy flow.
+
 ## Repository Structure
 
 ```
