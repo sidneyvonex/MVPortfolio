@@ -181,7 +181,7 @@ cd server
 pnpm start
 ```
 
-For deployment, serve the `client/dist/` folder from a static host (Vercel, Netlify, Cloudflare Pages) and deploy the server to a Node.js host (Railway, Render, Fly.io). Set the same environment variables on each platform.
+For deployment, serve the `client/dist/` folder from a static host (Vercel, Netlify, Cloudflare Pages) and deploy the server to a Node.js host. This project currently deploys the server to **Render** (see `render.yaml` at the repo root — a Blueprint that defines the web service, build/start commands, and required env var names; set the actual values in the Render dashboard). Set the same environment variables on whichever platform you use.
 
 ---
 
