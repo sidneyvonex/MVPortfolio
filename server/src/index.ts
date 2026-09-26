@@ -32,7 +32,10 @@ const SWAGGER_UI_HTML = `<!DOCTYPE html>
 const app = new Hono<AppEnv>();
 
 app.use('/api/*', async (c, next) => {
-    const corsMiddleware = cors({ origin: c.env.CLIENT_URL });
+    const allowedOrigins = c.env.CLIENT_URL.split(',').map((o) => o.trim());
+    const corsMiddleware = cors({
+        origin: (origin) => (allowedOrigins.includes(origin) ? origin : null),
+    });
     return corsMiddleware(c, next);
 });
 
