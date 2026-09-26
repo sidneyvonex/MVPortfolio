@@ -1,4 +1,4 @@
-import { createRouter, createRoute, createRootRoute, Outlet } from '@tanstack/react-router';
+import { createRouter, createRoute, createRootRoute, Outlet, redirect } from '@tanstack/react-router';
 import Home from '../pages/Home';
 import AdminLogin from '../pages/admin/Login';
 import AdminDashboard from '../pages/admin/Dashboard';
@@ -16,6 +16,14 @@ const homeRoute = createRoute({
 });
 
 // Admin routes
+const adminIndexRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/admin',
+  beforeLoad: () => {
+    throw redirect({ to: '/admin/login' });
+  },
+});
+
 const adminLoginRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/admin/login',
@@ -30,6 +38,7 @@ const adminDashboardRoute = createRoute({
 
 const routeTree = rootRoute.addChildren([
   homeRoute,
+  adminIndexRoute,
   adminLoginRoute,
   adminDashboardRoute,
 ]);
