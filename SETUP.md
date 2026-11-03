@@ -76,21 +76,16 @@ JWT_SECRET=replace_with_a_long_random_secret
 
 ## 4. Configure the client environment
 
-Create `client/.env`:
+Nothing is needed for local development. With `VITE_API_URL` unset, the site calls `/api` and the Vite dev server proxies those calls to the local API on port 8787 (see `client/vite.config.ts`). To work on the site with the live data instead, without running the API:
 
 ```bash
-cp client/.env.example client/.env   # or create manually
+cd client
+API_PROXY=https://mvportfolio-api.sidneygithu.workers.dev pnpm run dev
 ```
 
-Contents:
+Production builds read `VITE_API_URL` from the committed `client/.env.production`: the API Worker's absolute URL, including `/api`.
 
-```env
-# Full base URL of the Worker API (including /api)
-# During local development this value is also used to configure the Vite proxy
-VITE_API_URL=http://localhost:8787/api
-```
-
-> **Important:** Do not set `VITE_API_URL` as a system/shell environment variable. A shell-level value overrides the `.env` file and may cause the client to bypass the proxy.
+> **Important:** Do not set `VITE_API_URL` as a system/shell environment variable. A shell-level value overrides the `.env` files and makes the dev server skip the proxy.
 
 ---
 
@@ -161,7 +156,9 @@ Then open:
 
 ## 9. Deploy to Cloudflare
 
-Both apps deploy to Cloudflare — the client to Pages (or Workers static assets), the API as its own Worker.
+Both apps deploy to Cloudflare as Workers: the API as `mvportfolio-api`, the site as `client`, which serves the built `dist/` as static assets.
+
+When a deploy includes a database migration, run the migration first (`pnpm run migrate` in `server/`, with `DATABASE_URL` set), then deploy the API straight away.
 
 **API Worker:**
 ```bash
@@ -174,10 +171,10 @@ npx wrangler secret put CLOUDINARY_API_SECRET
 pnpm run deploy
 ```
 
-**Client (Cloudflare Pages):**
+**Site (`client` Worker):**
 ```bash
 cd client
-# set VITE_API_URL to your deployed Worker's URL first
+# VITE_API_URL in .env.production must point at the deployed API Worker
 pnpm run deploy
 ```
 
@@ -205,11 +202,12 @@ Both run comfortably on Cloudflare's free plan for a personal portfolio's traffi
 
 > **Free plan note:** Workers on Cloudflare's free plan get 10ms of CPU time per request. Login/register hash passwords with bcrypt at cost factor 10 (tuned down from the original 12) specifically to stay under that budget — don't raise it without checking CPU usage in the dashboard.
 
-### client/.env
+### client
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `VITE_API_URL` | Yes | Base URL of the API including `/api`. Used as the fetch base and Vite proxy target. |
+| Variable | Where | Description |
+|----------|-------|-------------|
+| `VITE_API_URL` | `client/.env.production` | API base URL including `/api`, used by production builds. Leave unset in development. |
+| `API_PROXY` | Shell, dev only | Where the dev server sends `/api` calls. Defaults to `http://localhost:8787`. |
 
 ---
 

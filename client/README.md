@@ -1,6 +1,6 @@
 # client
 
-React 19 + TypeScript frontend for the portfolio. Renders the public-facing portfolio site and the protected admin dashboard.
+React 19 + TypeScript site for the portfolio: the public pages in the Kodika Labs style, and the protected admin dashboard.
 
 ## Tech Stack
 
@@ -8,14 +8,17 @@ React 19 + TypeScript frontend for the portfolio. Renders the public-facing port
 |---------|---------|
 | React 19 + TypeScript | UI framework |
 | Vite | Dev server and bundler |
-| TanStack Router | File-based type-safe routing |
-| TanStack Query | Server state, caching, and mutations |
-| Framer Motion | Scroll-triggered section animations |
-| Tailwind CSS v4 | Utility-first styling |
-| React Three Fiber + Three.js | WebGL hero background |
+| React Router 7 | Pages and links |
+| TanStack Query | API data, cached per collection |
+| Tailwind CSS v4 | Styling, with the Kodika tokens in `src/index.css` |
+| Instrument Sans, JetBrains Mono | Self-hosted fonts (`@fontsource`) |
 | React Hook Form + Zod | Contact form validation |
-| Lucide React | Icon library |
+| Lucide React | Icons in the admin panel |
 | Sonner | Toast notifications |
+
+## Design system
+
+`src/index.css` holds the Kodika Labs brand: paper, ink and tangerine colours exposed as semantic roles (`surface`, `fg`, `fg-soft`, `line`, `accent`). Components use only the roles, so the dark theme (set on `<html data-theme>` by `public/theme-init.js` before first paint) needs no extra classes. Shape: square corners, hairline borders, tangerine for the eyebrow tile, one band per page and the hero tiles.
 
 ## Folder Structure
 
@@ -23,82 +26,57 @@ React 19 + TypeScript frontend for the portfolio. Renders the public-facing port
 src/
   components/
     admin/        Eight admin panels (one per content type)
-    layout/       Navbar, Footer, DotNavigation
-    sections/     Nine public portfolio sections
-    three/        HeroBackground (WebGL canvas)
+    layout/       Layout, Header, MobileMenu, Footer, Wordmark
+    sections/     Page building blocks: HomeHero, ServiceStrip, WorkGrid, Bands, ...
+    ui/           Button, Label, TileIcon (+ tileIcons), Container, SectionHeading, ...
+  data/
+    site.ts       Name, role, canonical URL, navigation
+    services.ts   The eight services and their pages' content
+    faq.ts        Questions and answers for /faq
   hooks/
-    useActiveSection.ts   IntersectionObserver-based scroll spy
+    useContent.ts   One query hook per API collection, sorted by `order`
+    useSettings.ts  Site settings plus derived links (email, socials, résumé)
+    usePageTitle.ts, useTheme.ts, useAdminHead.ts
   lib/
-    animations.ts   Framer Motion variants (fadeInUp, staggerContainer, etc.)
-    auth.ts         Token read/write helpers (localStorage)
-    router.ts       TanStack Router instance and route definitions
-    utils.ts        Shared utility functions
-  pages/
-    Home.tsx              Public portfolio (single long page)
-    Login.tsx             Admin login
-    admin/
-      Dashboard.tsx       Admin panel shell
+    format.ts     Dates, project summaries and paths, Cloudinary image sizes
+    auth.ts       Admin token helpers (localStorage)
+    favicon.ts    Admin tab icon from the hero photo
+  pages/          One file per route; admin/ for Login and Dashboard
   services/
-    api.ts          Public API calls (no auth required)
-    adminApi.ts     Authenticated API calls (Bearer token)
-  types/
-    index.ts        All shared TypeScript interfaces
-  main.tsx          App entry point
-  index.css         Global styles and Tailwind directives
+    api.ts        Public API calls
+    adminApi.ts   Authenticated API calls (Bearer token)
+  types/index.ts  Shared TypeScript interfaces
+  App.tsx         Routes
+  main.tsx        Entry point
 ```
-
-## Public Sections
-
-Rendered in order on `Home.tsx`:
-
-1. `Hero` — name, tagline, hero image, CTA buttons
-2. `About` — bio loaded from settings API
-3. `Skills` — tabbed by category
-4. `Portfolio` — project cards with image lightbox
-5. `Resume` — experience and education timeline
-6. `Testimonials` — rotating testimonial cards
-7. `Community` — community involvement cards
-8. `Contact` — contact info + message form
-9. `Footer` — links and navigation
-
-## Admin Panels
-
-Each panel in `components/admin/` maps to one API resource:
-
-| Panel | Resource |
-|-------|---------|
-| `ProjectsPanel` | Projects (with image upload) |
-| `SkillsPanel` | Skills (with icon upload) |
-| `ExperiencePanel` | Work experience |
-| `EducationPanel` | Education (with logo upload) |
-| `TestimonialsPanel` | Testimonials (with avatar upload) |
-| `CommunityPanel` | Community involvement (with logo upload) |
-| `ContactPanel` | Incoming contact messages |
-| `SettingsPanel` | Site settings, hero image, resume, social links |
 
 ## Routes
 
-| Path | Component | Access |
-|------|-----------|--------|
-| `/` | `Home.tsx` | Public |
-| `/admin/login` | `Login.tsx` | Public |
-| `/admin/dashboard` | `Dashboard.tsx` | Protected (redirects to login) |
+| Path | Page | Content from |
+|------|------|--------------|
+| `/` | Home: summaries of everything, each linking onward | API + `data/` |
+| `/services`, `/services/:slug` | Services and one page per service | `data/services.ts` |
+| `/work`, `/work/:slug` | Projects with filters, and case studies | API (slug, or id for older projects) |
+| `/about` | Story, experience, skills, education, community, testimonials | API |
+| `/contact` | Contact details and form | API |
+| `/faq`, `/privacy` | Questions, privacy notice | `data/faq.ts`, page |
+| `/admin` → `/admin/login`, `/admin/dashboard` | Admin | API (token required) |
 
 ## Environment
 
-Create `client/.env`:
+`.env.production` sets `VITE_API_URL` to the API Worker's absolute URL for production builds. In development `VITE_API_URL` is unset, calls go to `/api`, and Vite proxies them:
 
-```env
-VITE_API_URL=http://localhost:5000/api
+```bash
+pnpm dev                                                            # proxies to a local API on :8787
+API_PROXY=https://mvportfolio-api.sidneygithu.workers.dev pnpm dev  # uses the live API's data
 ```
-
-During local development, Vite proxies all `/api` requests to `http://localhost:5000` (configured in `vite.config.ts`). The `VITE_API_URL` value is used as the fetch base URL in both `api.ts` and `adminApi.ts`, with `'/api'` as the fallback for production deployments where the URL might not be set.
 
 ## Commands
 
 ```bash
-pnpm dev       # Start Vite dev server on port 5173
-pnpm build     # Type-check + build to dist/
-pnpm preview   # Preview the production build locally
-pnpm lint      # Run ESLint
+pnpm dev       # Vite dev server on port 5173
+pnpm build     # Type-check and build to dist/
+pnpm preview   # Build, then serve it with wrangler dev
+pnpm deploy    # Build, then deploy the Worker
+pnpm lint      # ESLint
 ```

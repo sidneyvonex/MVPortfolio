@@ -8,7 +8,7 @@
     "predev": "tsx scripts/generate-openapi.ts",
     "dev": "wrangler dev",
     "build": "tsx scripts/generate-openapi.ts",
-    "deploy": "npm run build && wrangler deploy",
+    "deploy": "pnpm run build && wrangler deploy",
     "cf-typegen": "wrangler types",
     "gen": "drizzle-kit generate",
     "migrate": "drizzle-kit migrate",

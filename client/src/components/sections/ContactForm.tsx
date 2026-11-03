@@ -6,10 +6,15 @@ import { api } from '../../services/api';
 import { Button } from '../ui/Button';
 import { Label } from '../ui/Label';
 
+// Maximum lengths match the API's limits (server/src/Contact/contact.controller.ts).
 const contactSchema = z.object({
-  name: z.string().min(2, 'Name must be at least 2 characters'),
-  email: z.string().email('Please enter a valid email'),
-  message: z.string().min(10, 'Message must be at least 10 characters'),
+  name: z.string().trim().min(2, 'Name must be at least 2 characters').max(100, 'Name is too long'),
+  email: z.string().trim().email('Please enter a valid email').max(254, 'Email is too long'),
+  message: z
+    .string()
+    .trim()
+    .min(10, 'Message must be at least 10 characters')
+    .max(5000, 'Please keep it under 5,000 characters'),
 });
 
 type ContactValues = z.infer<typeof contactSchema>;

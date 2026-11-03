@@ -1,241 +1,187 @@
 # Architecture
 
-This document describes how the portfolio system is structured, how data flows through it, and the reasoning behind key design decisions.
+How the portfolio is structured, how data flows through it, and why.
 
 ---
 
 ## System Overview
 
-The project is a two-app monorepo, and both apps deploy to Cloudflare. The `client/` and `server/` folders each have their own `package.json` and are developed and deployed independently.
+Two apps, both on Cloudflare. `client/` and `server/` each have their own `package.json` and are developed and deployed independently.
 
 ```
 browser
   |
-  |-- HTTP GET (static assets, JS bundle)
-  |                    |
-  |           Vite dev server (port 5173)
-  |           OR Cloudflare Pages CDN (production)
+  |-- HTML, JS, CSS, fonts
+  |        Vite dev server (port 5173)
+  |        OR the `client` Worker serving dist/ as static assets (production)
   |
-  |-- API calls to /api/*
+  |-- API calls
+  |        dev:  /api/*  -> Vite proxy -> local API on :8787, or the live API with API_PROXY
+  |        prod: VITE_API_URL (the API Worker's URL), allowed by CORS
   |                    |
-  |           Vite proxy  ─────────────────────────> Hono app on a Cloudflare Worker (port 8787 in dev)
-  |           (dev only)                                      |
-  |                                                  Drizzle ORM (neon-http driver)
-  |                                                           |
-  |                                                  Neon PostgreSQL (HTTP, no TCP)
+  |           Hono app on the `mvportfolio-api` Worker
+  |                    |
+  |           Drizzle ORM (neon-http driver) -> Neon PostgreSQL over HTTP
   |
-  |-- Image/file uploads (signed multipart POST straight to the Cloudinary REST API)
+  |-- Images and PDFs: the API uploads them to Cloudinary with signed REST calls;
+  |   the site loads them from Cloudinary, resized on delivery (f_auto,q_auto,w_…)
 ```
 
-In production, the Vite proxy is replaced by CORS (the Worker allows the `CLIENT_URL` origin). The API is its own Cloudflare Worker; the built client is served as static assets from Cloudflare Pages. The API previously ran as an Express app on a Node host (Azure App Service) — see [SETUP.md](SETUP.md) for the migration notes and free-tier CPU-time caveat (bcrypt cost factor was lowered from 12 to 10 to stay under the Workers free plan's 10ms/request CPU budget).
+The API previously ran as Express on Azure App Service; see [SETUP.md](SETUP.md). On Workers the bcrypt cost factor is 10 rather than 12 to stay within the free plan's CPU budget per request.
 
 ---
 
 ## Package Structure
 
 ```
-portfolio/
-  client/                  React + Vite frontend
-    src/
-      components/
-        admin/             Eight management panels (one per resource type)
-        layout/            Navbar, Footer, DotNavigation
-        sections/          Nine public-facing page sections
-        three/             Three.js hero background (HeroBackground.tsx)
-      hooks/               useActiveSection (scroll spy)
-      lib/                 animations.ts, auth.ts, router.ts, utils.ts
-      pages/               Home.tsx, Login.tsx, admin/Dashboard.tsx
-      services/            api.ts (public), adminApi.ts (authenticated)
-      types/               index.ts (all shared TypeScript interfaces)
+client/
+  src/
+    components/
+      admin/        Eight management panels (one per resource type)
+      layout/       Layout, Header, MobileMenu, Footer, Wordmark
+      sections/     Page building blocks (hero, service strip, work grid, bands, lists, form)
+      ui/           Button, Label, TileIcon, Container, SectionHeading, FilterChips, ThemeToggle
+    data/           site.ts, services.ts, faq.ts (content that lives in code)
+    hooks/          useContent, useSettings, usePageTitle, useTheme, useAdminHead
+    lib/            format.ts, auth.ts, favicon.ts
+    pages/          One file per route; admin/Login.tsx, admin/Dashboard.tsx
+    services/       api.ts (public), adminApi.ts (authenticated)
+    types/          index.ts (shared interfaces)
 
-  server/
-    src/
-      Community/           controller, routes, service
-      Contact/             controller, routes, service
-      Education/           controller, routes, service
-      Experience/          controller, routes, service
-      Projects/            controller, routes, service
-      Skills/              controller, routes, service
-      Testimonials/        controller, routes, service
-      User/                controller, routes, service (auth)
-      Middleware/          auth.ts (JWT), upload.ts (parses multipart bodies, uploads to Cloudinary)
-      config/              cloudinary.ts (signed REST uploads via fetch, no Node SDK)
-      db/                  index.ts (Drizzle client), schema.ts, seed.ts
-      scripts/             create-admin.ts
-      types/               env.ts (Worker Bindings/Variables types)
-      index.ts             Hono app + route mounting (the Worker's fetch entry point)
-      openapi.json          generated by scripts/generate-openapi.ts at build time, served at /api/docs
+server/
+  src/
+    Community/ Contact/ Education/ Experience/ Projects/ Skills/ Testimonials/
+                         controller, routes, service per resource
+    User/                auth and site settings
+    Middleware/          auth.ts (JWT), upload.ts (multipart parsing and validation)
+    config/              cloudinary.ts (signed uploads and download URLs via fetch)
+    db/                  index.ts (Drizzle client), schema.ts, seed.ts
+    drizzle/migrations/  SQL migrations generated by drizzle-kit (0005 hand-edited to backfill slugs)
+    scripts/             create-admin.ts
+    types/               env.ts (Worker bindings)
+    index.ts             Hono app, CORS and route mounting (the Worker's entry point)
+    openapi.json         Generated by scripts/generate-openapi.ts, served at /api/docs
 ```
 
 ---
 
-## Data Flow: Public Portfolio
+## Content: what lives where
 
-When a visitor opens the site, TanStack Query fetches each section's data independently.
+| Content | Source | Edited in |
+|---------|--------|-----------|
+| Projects, skills, experience, education, testimonials, communities | PostgreSQL via the API | `/admin` |
+| Name, email, links, photo, résumé, tagline, bio | `siteSettingsTable` via the API | `/admin` → Settings |
+| Services (eight pages), FAQ, navigation, site URL | `client/src/data/*.ts` | Code |
+
+Services and the FAQ are in code because they change rarely and are the pages search engines should find; they can be rendered without the API.
+
+---
+
+## Data Flow: Public Site
+
+Each page asks only for the collections it shows, through one hook per collection (`hooks/useContent.ts`). Every hook uses the same TanStack Query key, so a collection is fetched once and shared between pages, and sorts by the admin's `order` field.
 
 ```
-Home.tsx
-  |
-  +-- useQuery(['settings'])        -> GET /api/settings    -> siteSettingsTable
-  +-- useQuery(['projects'])        -> GET /api/projects    -> projectsTable
-  +-- useQuery(['skills'])          -> GET /api/skills      -> skillsTable
-  +-- useQuery(['experience'])      -> GET /api/experience  -> experienceTable
-  +-- useQuery(['education'])       -> GET /api/education   -> educationTable
-  +-- useQuery(['testimonials'])    -> GET /api/testimonials -> testimonialsTable
-  +-- useQuery(['community'])       -> GET /api/communities  -> communityTable
+useProjects()      -> GET /api/projects      -> projectsTable
+useSkills()        -> GET /api/skills        -> skillsTable
+useExperience()    -> GET /api/experience    -> experienceTable
+useEducation()     -> GET /api/education     -> educationTable
+useTestimonials()  -> GET /api/testimonials  -> testimonialsTable
+useCommunity()     -> GET /api/communities   -> communityTable
+useSettings()      -> GET /api/settings      -> siteSettingsTable
 ```
 
-Each query is independent. If one fails or the server is slow, the others are unaffected. Every section component accepts a `fallbackData` prop so static placeholder content is shown while the query loads.
+There is no placeholder content: a section renders only when its collection has entries, so the site never shows made-up data. Case studies are found by `slug`, or by `projectId` for projects saved before slugs existed.
 
 ---
 
 ## Data Flow: Admin Panel
 
-The admin panel is a single-page application mounted under `/admin/dashboard`. It is protected by a route guard in `router.ts` that checks for a valid JWT in `localStorage`.
-
-```
-Dashboard.tsx
-  |
-  +-- <ProjectsPanel>  useMutation -> POST/PUT/DELETE /api/projects
-  +-- <SkillsPanel>    useMutation -> POST/PUT/DELETE /api/skills
-  +-- <SettingsPanel>  useMutation -> PUT             /api/settings
-  +-- ...
-```
-
-All mutations in `adminApi.ts` attach the `Authorization: Bearer <token>` header. The token is written to `localStorage` under the key `admin_token` on successful login and removed on logout.
+`/admin/dashboard` hosts eight panels. Each loads its collection on mount and calls `adminApi.ts`, which adds `Authorization: Bearer <token>` to every request. The token is stored in `localStorage['admin_token']` on login and removed on logout. A 401 from the API clears the token and returns to `/admin/login`; other API errors are shown as the API's own message.
 
 ---
 
 ## Authentication
 
 ```
-POST /api/auth/login
-  body: { email, password }
-        |
-        |-- bcryptjs.compare(password, storedHash)
-        |
-        |-- jwt.sign({ userId, email }, JWT_SECRET, { expiresIn: '7d' })
-        |
-        response: { token }
+POST /api/auth/login  { email, password }
+  -> bcryptjs.compare(password, storedHash)
+  -> jwt.sign({ userId }, JWT_SECRET, { expiresIn: '7d' })
+  <- { token }
 
-client stores token in localStorage['admin_token']
-
-subsequent admin requests:
-  Authorization: Bearer <token>
-        |
-  authenticate middleware
-        |
-        |-- jwt.verify(token, JWT_SECRET)
-        |-- attaches req.user = { userId, email }
-        |-- calls next()
-        |   OR returns 401 if invalid/expired
+Protected requests: Authorization: Bearer <token>
+  -> authenticate middleware: jwt.verify(token, JWT_SECRET)
+  -> sets c.var.userId and continues, or answers 401
 ```
 
-The `authenticate` middleware in `server/src/Middleware/auth.ts` is applied to every protected route. Public GET routes do not require a token.
+Public GET routes and `POST /api/contact` need no token. `POST /api/auth/register` requires an existing admin's token.
 
 ---
 
 ## Settings System
 
-Personal details and site configuration are stored in a single key-value table:
+Personal details and site configuration live in one key-value table, so a new setting needs no migration:
 
 ```sql
-siteSettingsTable: { key TEXT PRIMARY KEY, value TEXT }
+siteSettingsTable: { key TEXT PRIMARY KEY, value TEXT, updatedAt TIMESTAMP }
 ```
 
-This avoids adding columns every time a new setting is needed. The service layer reduces all rows into a plain object at read time:
-
-```ts
-// getAllSettings (simplified)
-const rows = await db.select().from(siteSettingsTable);
-return rows.reduce((acc, row) => ({ ...acc, [row.key]: row.value }), {});
-```
-
-On write, each key-value pair is upserted independently. The current settings keys are:
+`GET /api/settings` returns every row as one object; `PUT /api/settings` upserts each key it is given.
 
 | Key | Purpose |
 |-----|---------|
-| `tagline` | Hero section sub-heading |
-| `heroImageUrl` | Hero profile image (Cloudinary URL) |
-| `heroFocalPoint` | Focal point for hero image as `"x,y"` (0–100 range) |
-| `resumeUrl` | Downloadable resume (Cloudinary URL) |
-| `githubUrl` | GitHub profile link |
-| `linkedinUrl` | LinkedIn profile link |
-| `twitterUrl` | Twitter/X profile link |
-| `email` | Contact section email |
-| `phone` | Contact section phone |
-| `location` | Contact section location text |
-| `aboutBio` | About section long-form bio |
+| `tagline` | Home hero sentence under the headline |
+| `heroImageUrl` | Portrait (Cloudinary URL) |
+| `heroFocalPoint` | CSS `object-position` for the portrait, e.g. `54% 30%` |
+| `resumeUrl` | Résumé PDF (Cloudinary URL), downloaded through `/api/settings/resume/download` |
+| `githubUrl`, `linkedinUrl`, `twitterUrl` | Profile links |
+| `email`, `phone`, `location` | Contact details |
+| `aboutBio` | About page story; blank lines separate paragraphs |
 
 ---
 
 ## File Upload Pipeline
 
-All file uploads (images, PDFs) follow the same path:
-
 ```
-client FormData POST
-        |
-  multer middleware (server)
-        |-- storage: memoryStorage (file is held in req.file.buffer)
-        |-- limits: 5 MB
-        |
-  uploadToCloudinary helper
-        |-- opens a Cloudinary upload stream
-        |-- pipes req.file.buffer through the stream
-        |-- resolves with { secure_url, public_id }
-        |
-  controller saves secure_url to the database
-        |
-  response: { url: secure_url }
+admin FormData POST
+  -> readUploadedFile (Middleware/upload.ts)
+       parses the multipart body, checks type and size
+       (images: jpg, png, webp, svg, gif up to 5 MB; PDFs up to 10 MB)
+  -> uploadToCloudinary (config/cloudinary.ts)
+       signs the parameters with the API secret and POSTs the file to Cloudinary
+  -> the controller saves secure_url in the database
+  <- { imageUrl } or { url }
 ```
 
-Files are never written to disk on the server. The buffer is streamed directly to Cloudinary. This keeps the server stateless and compatible with platforms that have ephemeral filesystems.
+Nothing is written to disk; the Worker holds the file in memory for the one request.
 
 ---
 
-## Frontend Rendering Pattern
+## Contact form
 
-Each section component follows the same pattern:
-
-```ts
-// 1. Fetch data
-const { data } = useQuery({ queryKey: ['skills'], queryFn: api.skills.getAll });
-
-// 2. Fall back to static placeholder if query hasn't resolved
-const skills = data ?? fallbackSkills;
-
-// 3. Render
-return <section>...</section>;
-```
-
-This means the page is never empty — placeholder data is visible immediately, and then replaced when the API responds. The same pattern is used in all nine sections.
+`POST /api/contact` is public. The API trims the fields and rejects missing values, a name over 100 characters, an email over 254 characters or without a valid shape, and a message over 5,000 characters. The form checks the same limits before sending.
 
 ---
 
 ## Routing
 
-TanStack Router manages three routes:
+| Route | Page | Access |
+|-------|------|--------|
+| `/` | Home | Public |
+| `/services`, `/services/:slug` | Services overview and detail | Public |
+| `/work`, `/work/:slug` | Projects and case studies | Public |
+| `/about`, `/contact`, `/faq`, `/privacy` | | Public |
+| `/admin` | Redirects to `/admin/login` | Public |
+| `/admin/login` | Login | Public |
+| `/admin/dashboard` | Dashboard | Redirects to login without a token |
 
-| Route | Component | Access |
-|-------|-----------|--------|
-| `/` | `Home.tsx` | Public |
-| `/admin/login` | `Login.tsx` | Public |
-| `/admin/dashboard` | `Dashboard.tsx` | Protected (redirect to login if no token) |
-
-Navigation on the home page is scroll-based. `DotNavigation` uses the `useActiveSection` hook, which attaches an `IntersectionObserver` to each section's element and updates a shared state as sections enter and leave the viewport.
-
----
-
-## Three.js Hero Background
-
-`HeroBackground.tsx` renders a full-screen WebGL canvas behind the hero section using React Three Fiber. It renders animated, semi-transparent geometric shapes. The component is purely visual and has no data dependencies. If WebGL is unavailable it renders nothing and the hero section falls back to its CSS background.
+Unknown paths render the 404 page inside the site frame.
 
 ---
 
 ## API Reference
 
-All routes are prefixed with `/api`. Protected routes require `Authorization: Bearer <token>`.
+All routes are prefixed with `/api`. Protected routes require `Authorization: Bearer <token>`. List endpoints return `[]` when empty.
 
 ### Authentication
 
@@ -248,14 +194,17 @@ All routes are prefixed with `/api`. Protected routes require `Authorization: Be
 
 | Method | Path | Access | Description |
 |--------|------|--------|-------------|
-| GET | `/settings` | Public | Returns all settings as a key-value object |
+| GET | `/settings` | Public | All settings as a key-value object |
 | PUT | `/settings` | Protected | Upserts one or more settings keys |
-| GET | `/settings/tagline` | Public | Returns the tagline setting |
-| POST | `/settings/tagline` | Protected | Updates the tagline setting |
-| GET | `/settings/resume` | Public | Returns the resume URL |
-| POST | `/settings/resume` | Protected | Updates the resume URL |
-| POST | `/settings/resume/upload` | Protected | Uploads a PDF to Cloudinary, saves URL |
-| POST | `/auth/upload/hero` | Protected | Uploads hero image to Cloudinary, saves URL |
+| GET | `/settings/tagline` | Public | The tagline setting |
+| POST | `/settings/tagline` | Protected | Updates the tagline |
+| GET | `/settings/resume` | Public | The résumé URL |
+| POST | `/settings/resume` | Protected | Updates the résumé URL |
+| GET | `/settings/resume/download` | Public | Streams the résumé PDF as a download (`?mode=inline` to view) |
+| GET | `/settings/resume/preview` | Public | Streams the résumé PDF inline |
+| POST | `/settings/resume/upload` | Protected | Uploads a PDF to Cloudinary, saves the URL |
+| GET | `/settings/hero` | Public | The portrait URL |
+| POST | `/auth/upload/hero` | Protected | Uploads the portrait to Cloudinary, saves the URL |
 
 ### Projects
 
@@ -263,9 +212,10 @@ All routes are prefixed with `/api`. Protected routes require `Authorization: Be
 |--------|------|--------|-------------|
 | GET | `/projects` | Public | All projects |
 | GET | `/projects/featured` | Public | Featured projects only |
-| GET | `/projects/:id` | Public | Single project |
-| POST | `/projects` | Protected | Create project |
-| PUT | `/projects/:id` | Protected | Update project |
+| GET | `/projects/slug/:slug` | Public | Single project by slug |
+| GET | `/projects/:id` | Public | Single project by id |
+| POST | `/projects` | Protected | Create project (slug made from the title when empty) |
+| PUT | `/projects/:id` | Protected | Update project (slug kept when left out) |
 | DELETE | `/projects/:id` | Protected | Delete project |
 | POST | `/projects/:id/image` | Protected | Upload project image |
 | PATCH | `/projects/:id/featured` | Protected | Toggle featured flag |
@@ -317,7 +267,7 @@ All routes are prefixed with `/api`. Protected routes require `Authorization: Be
 
 | Method | Path | Access | Description |
 |--------|------|--------|-------------|
-| POST | `/contact` | Public | Submit contact message |
+| POST | `/contact` | Public | Submit a message (validated, see above) |
 | GET | `/contact` | Protected | List all messages |
 | GET | `/contact/:id` | Protected | Single message |
 | DELETE | `/contact/:id` | Protected | Delete message |
@@ -336,4 +286,4 @@ All routes are prefixed with `/api`. Protected routes require `Authorization: Be
 
 ---
 
-Interactive API documentation (Swagger UI) is available at `/api/docs` while the server is running.
+Interactive API documentation (Swagger UI) is at `/api/docs` while the API runs.

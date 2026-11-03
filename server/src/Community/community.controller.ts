@@ -6,11 +6,9 @@ import { readUploadedFile, uploadFileToCloudinary } from '../Middleware/upload';
 // GET /api/communities
 export const getAllCommunities = async (c: Context<AppEnv>) => {
     try {
+        // An empty list is a valid answer, not a missing resource.
         const existingCommunities = await getAllCCommunitiesService();
-        if (!existingCommunities || existingCommunities.length === 0) {
-            return c.json({ message: 'No communities found' }, 404);
-        }
-        return c.json(existingCommunities, 200);
+        return c.json(existingCommunities ?? [], 200);
     } catch (error) {
         console.error('Error fetching communities:', error);
         const message = error instanceof Error ? error.message : 'Internal Server Error';

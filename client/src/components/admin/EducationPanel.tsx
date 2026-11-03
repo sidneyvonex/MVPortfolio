@@ -26,10 +26,12 @@ export default function EducationPanel() {
   const fileRef = useRef<HTMLInputElement>(null);
 
   const load = async () => {
-    try { setLoading(true); setItems(await educationApi.getAll()); }
+    try { setItems(await educationApi.getAll()); }
     catch { toast.error('Failed to load education'); }
     finally { setLoading(false); }
   };
+  // Fetch on mount: state is only set after the request resolves.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { load(); }, []);
 
   const openAdd  = () => { setForm(blank); setEditing(null); setPendingLogoFile(null); setModal(true); };

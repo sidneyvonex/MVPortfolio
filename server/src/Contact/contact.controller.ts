@@ -5,10 +5,8 @@ import { getAllContactMessagesService, getContactMessageByIdService, createConta
 // GET /api/contact
 export const getAllContactMessages = async (c: Context<AppEnv>) => {
     try {
+        // An empty inbox is a valid answer, not a missing resource.
         const messages = await getAllContactMessagesService();
-        if (messages.length === 0) {
-            return c.json({ message: 'No contact messages found' }, 404);
-        }
         return c.json(messages, 200);
     } catch (error) {
         console.error('Error fetching contact messages:', error);
@@ -36,11 +34,26 @@ export const getContactMessageById = async (c: Context<AppEnv>) => {
     }
 };
 
-// POST /api/contact
+// Limits for the public form: generous for real messages, small enough to stop abuse.
+const MAX_NAME = 100;
+const MAX_EMAIL = 254;
+const MAX_MESSAGE = 5000;
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+// POST /api/contact — public
 export const createContactMessage = async (c: Context<AppEnv>) => {
-    const { name, email, message } = await c.req.json();
+    const body = await c.req.json().catch(() => null);
+    const name = typeof body?.name === 'string' ? body.name.trim() : '';
+    const email = typeof body?.email === 'string' ? body.email.trim() : '';
+    const message = typeof body?.message === 'string' ? body.message.trim() : '';
     if (!name || !email || !message) {
         return c.json({ error: 'Name, email, and message are required' }, 400);
+    }
+    if (name.length > MAX_NAME || email.length > MAX_EMAIL || message.length > MAX_MESSAGE) {
+        return c.json({ error: `Name, email or message is too long (message limit ${MAX_MESSAGE} characters)` }, 400);
+    }
+    if (!EMAIL_PATTERN.test(email)) {
+        return c.json({ error: 'Please enter a valid email address' }, 400);
     }
     try {
         const result = await createContactMessageService({ name, email, message });

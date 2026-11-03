@@ -18,10 +18,12 @@ export default function SettingsPanel() {
   const resumeRef = useRef<HTMLInputElement>(null);
 
   const load = async () => {
-    try { setLoading(true); setSettings(await settingsApi.getAll()); }
+    try { setSettings(await settingsApi.getAll()); }
     catch { toast.error('Failed to load settings'); }
     finally { setLoading(false); }
   };
+  // Fetch on mount: state is only set after the request resolves.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { load(); }, []);
 
   const handleSave = async () => {

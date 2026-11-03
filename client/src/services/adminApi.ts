@@ -17,7 +17,15 @@ const handle = async (res: Response) => {
     throw new Error('Unauthorized');
   }
   if (!res.ok) {
-    const msg = await res.text().catch(() => `HTTP ${res.status}`);
+    // The API answers errors as { error: "..." }; show that sentence, not the raw JSON.
+    const text = await res.text().catch(() => '');
+    let msg = text || `HTTP ${res.status}`;
+    try {
+      const body = JSON.parse(text) as { error?: string; message?: string };
+      msg = body.error || body.message || msg;
+    } catch {
+      // Not JSON: keep the text as it is.
+    }
     throw new Error(msg);
   }
   if (res.status === 204) return undefined;

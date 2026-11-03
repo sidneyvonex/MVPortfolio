@@ -12,10 +12,12 @@ export default function ContactPanel() {
   const [deleteId, setDeleteId] = useState<number | null>(null);
 
   const load = async () => {
-    try { setLoading(true); const data = await contactApi.getAll(); setItems(data); }
+    try { const data = await contactApi.getAll(); setItems(data); }
     catch { toast.error('Failed to load messages'); }
     finally { setLoading(false); }
   };
+  // Fetch on mount: state is only set after the request resolves.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { load(); }, []);
 
   const toggleExpand = async (msg: AdminContactMessage) => {

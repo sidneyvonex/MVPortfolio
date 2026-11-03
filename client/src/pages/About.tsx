@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { CtaBand } from '../components/sections/Bands';
 import { EducationList, ExperienceList } from '../components/sections/ExperienceList';
 import { PageHeader } from '../components/sections/PageHeader';
@@ -32,7 +33,7 @@ const About = () => {
     { label: 'Open to', value: 'Projects, teams, hackathons' },
   ];
 
-  const section = (label: string, title: string, children: React.ReactNode) => (
+  const section = (label: string, title: string, children: ReactNode) => (
     <section className="border-b border-line">
       <Container className="grid gap-10 py-20 md:py-24">
         <SectionHeading label={label} title={title} />

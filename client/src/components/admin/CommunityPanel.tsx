@@ -26,10 +26,12 @@ export default function CommunityPanel() {
   const fileRef = useRef<HTMLInputElement>(null);
 
   const load = async () => {
-    try { setLoading(true); setItems(await communityApi.getAll()); }
+    try { setItems(await communityApi.getAll()); }
     catch { toast.error('Failed to load community entries'); }
     finally { setLoading(false); }
   };
+  // Fetch on mount: state is only set after the request resolves.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { load(); }, []);
 
   const openAdd  = () => { setForm(blank); setEditing(null); setPendingLogoFile(null); setModal(true); };

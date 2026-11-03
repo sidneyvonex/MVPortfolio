@@ -33,10 +33,12 @@ export default function TestimonialsPanel() {
   const modalAvatarRef = useRef<HTMLInputElement>(null);
 
   const load = async () => {
-    try { setLoading(true); setItems(await testimonialsApi.getAll()); }
+    try { setItems(await testimonialsApi.getAll()); }
     catch { toast.error('Failed to load testimonials'); }
     finally { setLoading(false); }
   };
+  // Fetch on mount: state is only set after the request resolves.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { load(); }, []);
 
   const openAdd  = () => { setForm(blank); setEditing(null); setModal(true); };

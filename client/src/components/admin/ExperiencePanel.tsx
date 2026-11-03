@@ -21,10 +21,12 @@ export default function ExperiencePanel() {
   const [deleteId, setDeleteId] = useState<number | null>(null);
 
   const load = async () => {
-    try { setLoading(true); setItems(await experienceApi.getAll()); }
+    try { setItems(await experienceApi.getAll()); }
     catch { toast.error('Failed to load experience'); }
     finally { setLoading(false); }
   };
+  // Fetch on mount: state is only set after the request resolves.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { load(); }, []);
 
   const openAdd  = () => { setForm(blank); setEditing(null); setModal(true); };
