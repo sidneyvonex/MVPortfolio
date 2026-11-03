@@ -10,19 +10,12 @@ import { HeroTiles } from './HeroTiles';
 export const HomeHero = () => {
   const { settings } = useSettings();
   const photo = settings?.heroImageUrl;
-  const location = settings?.location || SITE.location;
 
   return (
     <section className="relative overflow-hidden border-b border-line">
       <HeroTiles />
       <Container className="relative grid items-end gap-12 pt-16 pb-36 md:pt-24 md:pb-48 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)] lg:gap-16">
         <div className="grid content-center gap-7 self-center">
-          <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
-            <Label dot className="text-fg">
-              Open to work
-            </Label>
-            <Label className="text-fg-soft">{location}</Label>
-          </div>
           <h1 className="max-w-[15ch] text-[clamp(2.6rem,6.2vw,5.25rem)] leading-[1.02] tracking-[-0.04em]">
             I build software people use.
           </h1>
