@@ -4,6 +4,7 @@ import {
     getAllProjects,
     getFeaturedProjects,
     getProjectById,
+    getProjectBySlug,
     createProject,
     updateProject,
     deleteProject,
@@ -16,6 +17,7 @@ export const ProjectsRouter = new Hono<AppEnv>();
 
 ProjectsRouter.get('/projects', getAllProjects);
 ProjectsRouter.get('/projects/featured', getFeaturedProjects);
+ProjectsRouter.get('/projects/slug/:slug', getProjectBySlug);
 ProjectsRouter.get('/projects/:projectId', getProjectById);
 ProjectsRouter.post('/projects', authenticate, createProject);
 ProjectsRouter.put('/projects/:projectId', authenticate, updateProject);

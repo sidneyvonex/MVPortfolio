@@ -17,7 +17,7 @@ const post = async <T>(endpoint: string, body: unknown): Promise<T> => {
 };
 
 export const api = {
-  projects:      { getAll: () => get('/projects') },
+  projects:      { getAll: () => get('/projects'), getBySlug: (slug: string) => get(`/projects/slug/${encodeURIComponent(slug)}`) },
   skills:        { getAll: ()  => get('/skills') },
   experience:    { getAll: ()  => get('/experience') },
   education:     { getAll: ()  => get('/education') },

@@ -4,6 +4,9 @@ import {
     getAllProjectsService,
     getFeaturedProjectsService,
     getProjectByIdService,
+    getProjectBySlugService,
+    toSlug,
+    uniqueSlugService,
     createProjectService,
     updateProjectService,
     deleteProjectService,
@@ -51,15 +54,31 @@ export const getProjectById = async (c: Context<AppEnv>) => {
     }
 };
 
-// POST /api/projects
+// GET /api/projects/slug/:slug — the case study page looks projects up by slug
+export const getProjectBySlug = async (c: Context<AppEnv>) => {
+    const slug = c.req.param('slug') ?? '';
+    try {
+        const project = await getProjectBySlugService(slug);
+        if (!project) {
+            return c.json({ error: 'Project not found' }, 404);
+        }
+        return c.json(project, 200);
+    } catch (error) {
+        const message = error instanceof Error ? error.message : 'Internal Server Error';
+        return c.json({ error: message }, 500);
+    }
+};
+
+// POST /api/projects — slug is optional; without one it comes from the title
 export const createProject = async (c: Context<AppEnv>) => {
-    const { title, description, techStack, imageUrl, liveUrl, githubUrl, featured, order } = await c.req.json();
+    const { title, slug, summary, description, techStack, imageUrl, liveUrl, githubUrl, featured, order } = await c.req.json();
     if (!title || !description || !techStack) {
         return c.json({ error: 'Title, description, and techStack are required' }, 400);
     }
     const techStackArray = Array.isArray(techStack) ? techStack : techStack.split(',').map((s: string) => s.trim());
     try {
-        const result = await createProjectService({ title, description, techStack: techStackArray, imageUrl, liveUrl, githubUrl, featured, order });
+        const finalSlug = await uniqueSlugService(toSlug(slug || title));
+        const result = await createProjectService({ title, slug: finalSlug, summary: summary || null, description, techStack: techStackArray, imageUrl, liveUrl, githubUrl, featured, order });
         return c.json({ message: result }, 201);
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Internal Server Error';
@@ -73,13 +92,15 @@ export const updateProject = async (c: Context<AppEnv>) => {
     if (isNaN(projectId)) {
         return c.json({ error: 'Invalid project ID' }, 400);
     }
-    const { title, description, techStack, imageUrl, liveUrl, githubUrl, featured, order } = await c.req.json();
+    const { title, slug, summary, description, techStack, imageUrl, liveUrl, githubUrl, featured, order } = await c.req.json();
     if (!title || !description || !techStack) {
         return c.json({ error: 'Title, description, and techStack are required' }, 400);
     }
     const techStackArray = Array.isArray(techStack) ? techStack : techStack.split(',').map((s: string) => s.trim());
     try {
-        const result = await updateProjectService(projectId, { title, description, techStack: techStackArray, imageUrl, liveUrl, githubUrl, featured, order });
+        // Fields left out of the request keep their stored value
+        const finalSlug = slug === undefined ? undefined : await uniqueSlugService(toSlug(slug || title), projectId);
+        const result = await updateProjectService(projectId, { title, slug: finalSlug, summary: summary === undefined ? undefined : summary || null, description, techStack: techStackArray, imageUrl, liveUrl, githubUrl, featured, order });
         return c.json({ message: result }, 200);
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Internal Server Error';

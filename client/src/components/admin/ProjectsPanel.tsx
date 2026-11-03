@@ -6,10 +6,11 @@ import type { Project } from '../../types';
 
 import { INP, LBL, BTN_PRIMARY, BTN_GHOST } from './adminStyles';
 
-type Form = { title: string; description: string; techStack: string; liveUrl: string; githubUrl: string; featured: boolean; order: string };
-const blank: Form = { title: '', description: '', techStack: '', liveUrl: '', githubUrl: '', featured: false, order: '0' };
-const toForm = (p: Project): Form => ({ title: p.title, description: p.description, techStack: p.techStack.join(', '), liveUrl: p.liveUrl ?? '', githubUrl: p.githubUrl ?? '', featured: p.featured, order: String(p.order) });
-const fromForm = (f: Form): Partial<Project> => ({ title: f.title, description: f.description, techStack: f.techStack.split(',').map(s => s.trim()).filter(Boolean), liveUrl: f.liveUrl || null, githubUrl: f.githubUrl || null, featured: f.featured, order: Number(f.order) || 0 });
+type Form = { title: string; slug: string; summary: string; description: string; techStack: string; liveUrl: string; githubUrl: string; featured: boolean; order: string };
+const blank: Form = { title: '', slug: '', summary: '', description: '', techStack: '', liveUrl: '', githubUrl: '', featured: false, order: '0' };
+const toForm = (p: Project): Form => ({ title: p.title, slug: p.slug, summary: p.summary ?? '', description: p.description, techStack: p.techStack.join(', '), liveUrl: p.liveUrl ?? '', githubUrl: p.githubUrl ?? '', featured: p.featured, order: String(p.order) });
+// An empty slug is sent as '' so the API makes one from the title.
+const fromForm = (f: Form): Partial<Project> => ({ title: f.title, slug: f.slug.trim(), summary: f.summary.trim() || null, description: f.description, techStack: f.techStack.split(',').map(s => s.trim()).filter(Boolean), liveUrl: f.liveUrl || null, githubUrl: f.githubUrl || null, featured: f.featured, order: Number(f.order) || 0 });
 
 export default function ProjectsPanel() {
   const [items, setItems] = useState<Project[]>([]);
@@ -234,7 +235,9 @@ export default function ProjectsPanel() {
               )}
 
               <div><label className={LBL}>Title *</label><input className={INP} value={form.title} onChange={e => sf('title', e.target.value)} placeholder="Project name" /></div>
-              <div><label className={LBL}>Description *</label><textarea className={`${INP} resize-none`} rows={3} value={form.description} onChange={e => sf('description', e.target.value)} placeholder="Brief description" /></div>
+              <div><label className={LBL}>URL slug</label><input className={INP} value={form.slug} onChange={e => sf('slug', e.target.value)} placeholder="Leave empty to make one from the title" /><p className="mt-1 text-xs text-[#8892A4]">Page address: /work/{form.slug.trim() || '…'}. Changing it breaks links people already shared.</p></div>
+              <div><label className={LBL}>Summary</label><textarea className={`${INP} resize-none`} rows={2} value={form.summary} onChange={e => sf('summary', e.target.value)} placeholder="One or two lines shown on project cards" /></div>
+              <div><label className={LBL}>Description *</label><textarea className={`${INP} resize-none`} rows={6} value={form.description} onChange={e => sf('description', e.target.value)} placeholder="The full write-up shown on the project's own page" /></div>
               <div><label className={LBL}>Tech Stack (comma-separated)</label><input className={INP} value={form.techStack} onChange={e => sf('techStack', e.target.value)} placeholder="React, TypeScript, Node.js" /></div>
               <div className="grid grid-cols-2 gap-3">
                 <div><label className={LBL}>GitHub URL</label><input className={INP} value={form.githubUrl} onChange={e => sf('githubUrl', e.target.value)} placeholder="https://github.com/..." /></div>

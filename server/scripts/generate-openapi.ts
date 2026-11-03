@@ -103,7 +103,8 @@ Get a token by calling \`POST /api/auth/login\`.
             Project: {
                 type: 'object',
                 properties: {
-                    projectId: { type: 'integer' }, title: { type: 'string' }, description: { type: 'string' },
+                    projectId: { type: 'integer' }, title: { type: 'string' }, slug: { type: 'string' },
+                    summary: { type: 'string', nullable: true }, description: { type: 'string' },
                     techStack: { type: 'array', items: { type: 'string' } }, imageUrl: { type: 'string', nullable: true },
                     liveUrl: { type: 'string', nullable: true }, githubUrl: { type: 'string', nullable: true },
                     featured: { type: 'boolean' }, order: { type: 'integer' }, createdAt: { type: 'string', format: 'date-time', nullable: true },
@@ -113,6 +114,8 @@ Get a token by calling \`POST /api/auth/login\`.
                 type: 'object', required: ['title', 'description', 'techStack'],
                 properties: {
                     title: { type: 'string' }, description: { type: 'string' },
+                    slug: { type: 'string', description: 'Optional; made from the title when empty, with -2, -3 added if taken' },
+                    summary: { type: 'string', description: 'One or two lines for project cards' },
                     techStack: { type: 'string', description: 'Comma-separated or JSON array' },
                     imageUrl: { type: 'string' }, liveUrl: { type: 'string' }, githubUrl: { type: 'string' },
                     featured: { type: 'boolean' }, order: { type: 'integer' },
@@ -226,6 +229,7 @@ Get a token by calling \`POST /api/auth/login\`.
         },
         '/projects': merge(listGet('Projects', 'Project'), create('Projects', 'ProjectBody')),
         '/projects/featured': { get: { tags: ['🔓 Projects (Public)'], summary: 'Get featured projects only', responses: { 200: { description: 'List of featured projects' } } } },
+        '/projects/slug/{slug}': { get: { tags: ['🔓 Projects (Public)'], summary: 'Get a project by its slug', parameters: [{ name: 'slug', in: 'path', required: true, schema: { type: 'string' } }], responses: { 200: { description: 'Project', content: { 'application/json': { schema: { $ref: '#/components/schemas/Project' } } } }, 404: { description: 'Project not found' } } } },
         '/projects/{projectId}': merge(byIdGet('Projects', 'Project', 'projectId'), update('Projects', 'ProjectBody', 'projectId'), remove('Projects', 'projectId')),
         '/projects/{projectId}/image': imageUpload('Projects', 'projectId', 'image'),
         '/projects/{projectId}/featured': { patch: { tags: ['🔐 Projects (Admin)'], summary: 'Toggle featured flag on a project', security: [bearerAuth], parameters: [{ name: 'projectId', in: 'path', required: true, schema: { type: 'integer' } }], responses: { 200: { description: 'Featured status toggled' }, 401: { description: 'Unauthorized' }, 404: { description: 'Project not found' } } } },

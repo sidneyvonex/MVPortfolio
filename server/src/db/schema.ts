@@ -12,6 +12,8 @@ export const usersTable = pgTable('usersTable', {
 export const projectsTable = pgTable('projectsTable', {
     projectId: serial('projectId').primaryKey(),
     title: text('title').notNull(),
+    slug: text('slug').notNull().unique(), // URL of the case study: /work/<slug>
+    summary: text('summary'), // one or two lines for cards; description is the full write-up
     description: text('description').notNull(),
     techStack: text('techStack').array().notNull(),
     imageUrl: text('imageUrl'),

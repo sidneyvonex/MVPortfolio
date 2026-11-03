@@ -1,6 +1,10 @@
 export interface Project {
   projectId: number;
   title: string;
+  /** URL of the case study: /work/<slug> */
+  slug: string;
+  /** One or two lines for project cards; description is the full write-up. */
+  summary: string | null;
   description: string;
   techStack: string[];
   imageUrl: string | null;

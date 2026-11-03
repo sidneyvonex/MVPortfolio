@@ -9,6 +9,8 @@ const fallbackProjects: Project[] = [
   {
     projectId: 1,
     title: 'Bitsa Club Website',
+    slug: 'bitsa-club-website',
+    summary: null,
     description:
       'Designed and developed the BITSA web platform to centralize student engagement, featuring role-based access for students, leaders, and administrators, integrated AI-assisted support, event management, and community connectivity.',
     techStack: ['React.js', 'TypeScript', 'Tailwind CSS', 'Node.js', 'Express.js', 'PostgreSQL'],
@@ -22,6 +24,8 @@ const fallbackProjects: Project[] = [
   {
     projectId: 2,
     title: 'TicKenya — Event Ticketing',
+    slug: 'tickenya-event-ticketing',
+    summary: null,
     description:
       'Full-stack Event Ticketing and Venue Booking System with modular React architecture, secure JWT-based APIs, real-time RTK Query, M-Pesa integration, and dynamic role-based dashboards.',
     techStack: ['React.js', 'TypeScript', 'Redux Toolkit', 'Node.js', 'Express.js', 'PostgreSQL'],
@@ -35,6 +39,8 @@ const fallbackProjects: Project[] = [
   {
     projectId: 3,
     title: 'Portfolio CMS',
+    slug: 'portfolio-cms',
+    summary: null,
     description:
       'A headless CMS powering this portfolio — REST API with JWT auth, Drizzle ORM, and Cloudinary for media management.',
     techStack: ['Express.js', 'TypeScript', 'Drizzle ORM', 'PostgreSQL', 'Cloudinary'],
@@ -48,6 +54,8 @@ const fallbackProjects: Project[] = [
   {
     projectId: 4,
     title: 'Auth Microservice',
+    slug: 'auth-microservice',
+    summary: null,
     description:
       'Reusable JWT + refresh-token auth microservice with role-based access control, rate limiting, and audit logs.',
     techStack: ['Node.js', 'Express.js', 'PostgreSQL', 'Redis'],

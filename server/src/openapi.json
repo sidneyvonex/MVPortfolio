@@ -46,6 +46,13 @@
           "title": {
             "type": "string"
           },
+          "slug": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string",
+            "nullable": true
+          },
           "description": {
             "type": "string"
           },
@@ -93,6 +100,14 @@
           },
           "description": {
             "type": "string"
+          },
+          "slug": {
+            "type": "string",
+            "description": "Optional; made from the title when empty, with -2, -3 added if taken"
+          },
+          "summary": {
+            "type": "string",
+            "description": "One or two lines for project cards"
           },
           "techStack": {
             "type": "string",
@@ -898,6 +913,39 @@
         "responses": {
           "200": {
             "description": "List of featured projects"
+          }
+        }
+      }
+    },
+    "/projects/slug/{slug}": {
+      "get": {
+        "tags": [
+          "🔓 Projects (Public)"
+        ],
+        "summary": "Get a project by its slug",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Project",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Project"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Project not found"
           }
         }
       }

@@ -11,6 +11,8 @@ async function seed() {
     const projects = await db.insert(schema.projectsTable).values([
         {
             title: "Portfolio Website",
+            slug: "portfolio-website",
+            summary: "Personal portfolio with its own admin panel for every piece of content.",
             description: "A full-stack personal portfolio built with React, TypeScript, Express and Neon PostgreSQL. Features a CMS-style admin panel for managing all content.",
             techStack: ["React", "TypeScript", "Express", "PostgreSQL", "Drizzle ORM", "Cloudinary"],
             liveUrl: "https://yourdomain.com",
@@ -20,6 +22,8 @@ async function seed() {
         },
         {
             title: "E-Commerce Platform",
+            slug: "e-commerce-platform",
+            summary: "Online store with product management, checkout and card payments.",
             description: "A scalable online store with product management, cart, checkout, and Stripe payment integration. Built with Next.js and a headless CMS.",
             techStack: ["Next.js", "Stripe", "Tailwind CSS", "Prisma", "PostgreSQL"],
             liveUrl: "https://shop.yourdomain.com",
@@ -29,6 +33,8 @@ async function seed() {
         },
         {
             title: "Task Management App",
+            slug: "task-management-app",
+            summary: "Kanban board with real-time updates and drag and drop.",
             description: "A Kanban-style task board with real-time updates via WebSockets, drag-and-drop, and team collaboration features.",
             techStack: ["React", "Node.js", "Socket.io", "MongoDB", "Express"],
             githubUrl: "https://github.com/yourhandle/taskboard",
@@ -37,6 +43,8 @@ async function seed() {
         },
         {
             title: "Weather Dashboard",
+            slug: "weather-dashboard",
+            summary: "Seven-day forecasts drawn as animated charts.",
             description: "A weather app that visualises 7-day forecasts with animated charts using the OpenWeather API.",
             techStack: ["Vue.js", "Chart.js", "OpenWeather API", "Vite"],
             liveUrl: "https://weather.yourdomain.com",

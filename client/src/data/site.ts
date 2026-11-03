@@ -6,6 +6,8 @@ export const SITE = {
   fullName: "Bensidney Githu Ndung'u",
   role: 'Full stack developer',
   location: 'Kenya',
+  /** Canonical address: used for the sitemap, link previews and structured data. */
+  url: 'https://sidney.kodikalabs.com',
   /** Fallback until settings load, and for pages rendered before the API is reached. */
   email: 'bensidneyndungu@gmail.com',
   description:

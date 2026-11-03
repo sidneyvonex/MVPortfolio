@@ -36,6 +36,13 @@
       "when": 1774105862947,
       "tag": "0004_broad_mercury",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1793711637831,
+      "tag": "0005_project_slug_summary",
+      "breakpoints": true
     }
   ]
 }
