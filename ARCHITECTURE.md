@@ -95,6 +95,20 @@ There is no placeholder content: a section renders only when its collection has 
 
 ---
 
+## Prerendering and SEO
+
+`pnpm build` in `client/` ends by running `scripts/prerender.mjs`, which:
+
+1. Fetches every collection from the live API (`VITE_API_URL` in `.env.production`). A failed fetch stops the build, so a deploy never ships pages without content.
+2. Renders each public page to HTML with `src/entry-server.tsx` and writes it to `dist/<path>.html`: the home page, services, the eight service pages, work, one page per project, about, contact, FAQ and privacy.
+3. Gives each page its own `<title>`, description, canonical URL, Open Graph and Twitter tags, and JSON-LD (`Person` on every page, plus `WebSite`/`ProfilePage`, `Service`, `CreativeWork`, `FAQPage`, `ContactPage` and `BreadcrumbList` where they apply). All of it comes from `src/seo/documents.ts`.
+4. Embeds the data it rendered with in `<script type="application/json" id="initial-data">`. The browser seeds TanStack Query from it, hydrates the HTML, and refetches each collection in the background, so edits made after the build still appear.
+5. Writes `404.html` (served with a 404 status for unknown paths), empty `noindex` shells for the admin, `sitemap.xml`, `robots.txt` (admin disallowed) and `llms.txt`.
+
+Content edited in the admin panel shows to visitors immediately, but search engines and link previews only see it after the next build and deploy.
+
+---
+
 ## Data Flow: Admin Panel
 
 `/admin/dashboard` hosts eight panels. Each loads its collection on mount and calls `adminApi.ts`, which adds `Authorization: Bearer <token>` to every request. The token is stored in `localStorage['admin_token']` on login and removed on logout. A 401 from the API clears the token and returns to `/admin/login`; other API errors are shown as the API's own message.

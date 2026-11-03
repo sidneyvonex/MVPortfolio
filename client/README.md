@@ -75,7 +75,7 @@ API_PROXY=https://mvportfolio-api.sidneygithu.workers.dev pnpm dev  # uses the l
 
 ```bash
 pnpm dev       # Vite dev server on port 5173
-pnpm build     # Type-check and build to dist/
+pnpm build     # Type-check, build, then prerender every page to dist/ from the live API
 pnpm preview   # Build, then serve it with wrangler dev
 pnpm deploy    # Build, then deploy the Worker
 pnpm lint      # ESLint

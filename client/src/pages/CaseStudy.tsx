@@ -16,7 +16,8 @@ const CaseStudy = () => {
   const { items: projects, isLoading } = useProjects();
   const index = projects.findIndex((p) => p.slug === slug || String(p.projectId) === slug);
   const project = projects[index];
-  usePageTitle(project?.title);
+  // This effect runs after NotFound's, so it must name the 404 itself when there is no project.
+  usePageTitle(project ? project.title : isLoading ? undefined : 'Page not found');
 
   if (isLoading) return <Container className="py-28 text-fg-soft">Loading…</Container>;
   if (!project) return <NotFound />;

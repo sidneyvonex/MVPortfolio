@@ -11,6 +11,8 @@ export interface Service {
   group: ServiceGroup;
   icon: IconName;
   title: string;
+  /** Page title for search results: the phrase people type, e.g. "Website developer in Kenya". */
+  seoTitle: string;
   /** One line for cards and the page description. */
   summary: string;
   /** Opening paragraph of the service page. */
@@ -45,6 +47,7 @@ export const SERVICES: Service[] = [
     group: 'build',
     icon: 'websites',
     title: 'Websites',
+    seoTitle: 'Website developer in Kenya',
     summary: 'Fast, search-friendly websites for businesses, organisations and personal brands.',
     intro:
       'A website that loads quickly, reads well on a phone and shows up when people search for what you do. Built to be easy to update after launch.',
@@ -71,6 +74,7 @@ export const SERVICES: Service[] = [
     group: 'build',
     icon: 'web-apps',
     title: 'Web apps',
+    seoTitle: 'Web app developer in Kenya',
     summary: 'Dashboards, portals and internal tools built around how your team actually works.',
     intro:
       'Software that runs in the browser: customer portals, admin dashboards and tools that replace spreadsheets and manual steps. Front end, back end and database, built together.',
@@ -97,6 +101,7 @@ export const SERVICES: Service[] = [
     group: 'build',
     icon: 'mobile-apps',
     title: 'Mobile apps',
+    seoTitle: 'Mobile app developer in Kenya',
     summary: 'iOS and Android apps, from the first clickable prototype to the app stores.',
     intro:
       'Apps for phones, built from one codebase for iOS and Android, sharing a back end with your web app where that makes sense.',
@@ -122,6 +127,7 @@ export const SERVICES: Service[] = [
     group: 'build',
     icon: 'custom-platforms',
     title: 'Custom platforms',
+    seoTitle: 'Custom software and M-Pesa integrations',
     summary: 'Booking, payments, marketplaces and the other systems a business runs on.',
     intro:
       'Larger systems with several kinds of users and money moving through them: bookings, marketplaces, subscriptions. Designed so they keep working as the business grows.',
@@ -150,6 +156,7 @@ export const SERVICES: Service[] = [
     group: 'collaborate',
     icon: 'team',
     title: 'Collaboration projects',
+    seoTitle: 'Developer for collaboration projects',
     summary: 'Building with other developers on side projects, open source and products in progress.',
     intro:
       'I like building with other developers. If you have a project that needs another pair of hands across the front end, back end or database, I am open to joining.',
@@ -173,6 +180,7 @@ export const SERVICES: Service[] = [
     group: 'collaborate',
     icon: 'early',
     title: 'Hackathons',
+    seoTitle: 'Full stack hackathon teammate',
     summary: 'A full stack teammate who can get a working demo built under time pressure.',
     intro:
       'Hackathons reward teams that can go from idea to working demo fast. I can cover the front end, the back end and the deployment, so the team spends its time on the idea.',
@@ -195,6 +203,7 @@ export const SERVICES: Service[] = [
     group: 'collaborate',
     icon: 'ship',
     title: 'Short sprints',
+    seoTitle: 'Short sprints: MVPs, features and fixes',
     summary: 'One or two focused weeks on a single goal: an MVP, a feature or a fix.',
     intro:
       'Some work has a clear goal and a short deadline. A sprint is one or two weeks spent on exactly that, ending with something shipped.',
@@ -217,6 +226,7 @@ export const SERVICES: Service[] = [
     group: 'collaborate',
     icon: 'stay',
     title: 'Short-term contracts',
+    seoTitle: 'Short-term contract developer',
     summary: 'Extra hands on an existing team for a set number of weeks or months.',
     intro:
       'When a team has more work than people for a while, I can join for a fixed period, work in your tools and process, and leave the code in good shape.',

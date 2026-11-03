@@ -15,7 +15,7 @@ import NotFound from './NotFound';
 const ServiceDetail = () => {
   const { slug } = useParams();
   const service = SERVICES.find((s) => s.slug === slug);
-  usePageTitle(service?.title);
+  usePageTitle(service ? service.seoTitle : 'Page not found');
   if (!service) return <NotFound />;
 
   const group = SERVICE_GROUPS[service.group];

@@ -7,6 +7,9 @@
   },
   "assets": {
     "directory": "dist",
-    "not_found_handling": "single-page-application"
+    // Every page is prerendered to dist/<path>.html (served at /<path>); unknown paths get
+    // dist/404.html with a real 404 status, so search engines never index a wrong address.
+    "html_handling": "auto-trailing-slash",
+    "not_found_handling": "404-page"
   }
 }
