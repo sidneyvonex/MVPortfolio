@@ -7,8 +7,9 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   server: {
     proxy: {
+      // Local API by default; API_PROXY=https://mvportfolio-api.sidneygithu.workers.dev uses live data.
       '/api': {
-        target: 'http://localhost:8787',
+        target: process.env.API_PROXY || 'http://localhost:8787',
         changeOrigin: true,
       },
     },
