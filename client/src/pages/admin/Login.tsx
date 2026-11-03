@@ -1,5 +1,5 @@
 ﻿import { useState, useEffect } from 'react';
-import { useNavigate } from '@tanstack/react-router';
+import { useNavigate } from 'react-router';
 import { Terminal, Lock, Mail, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { authApi } from '../../services/adminApi';
 import { setToken, isAuthenticated } from '../../lib/auth';
@@ -16,7 +16,7 @@ const AdminLogin = () => {
   useAdminHead('Admin Login — CodeSidney');
 
   useEffect(() => {
-    if (isAuthenticated()) navigate({ to: '/admin/dashboard' });
+    if (isAuthenticated()) navigate('/admin/dashboard');
   }, [navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -26,7 +26,7 @@ const AdminLogin = () => {
     try {
       const { token } = await authApi.login(email, password);
       setToken(token);
-      navigate({ to: '/admin/dashboard' });
+      navigate('/admin/dashboard');
     } catch {
       setError('Invalid email or password. Please try again.');
     } finally {

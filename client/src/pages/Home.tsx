@@ -1,7 +1,3 @@
-import { useQuery } from '@tanstack/react-query';
-import Navbar from '../components/layout/Navbar';
-import Footer from '../components/layout/Footer';
-import DotNavigation from '../components/layout/DotNavigation';
 import Hero from '../components/sections/Hero';
 import About from '../components/sections/About';
 import Resume from '../components/sections/Resume';
@@ -11,39 +7,25 @@ import Education from '../components/sections/Education';
 import Community from '../components/sections/Community';
 import Testimonials from '../components/sections/Testimonials';
 import Contact from '../components/sections/Contact';
-import PageLoader from '../components/ui/PageLoader';
-import { useDynamicHead } from '../hooks/useDynamicHead';
-import { api } from '../services/api';
+import { usePageTitle } from '../hooks/usePageTitle';
 
+// One page with every section. Each becomes a short summary linking to its own page as the
+// sections are restyled.
 const Home = () => {
-  useDynamicHead();
-
-  const { isLoading } = useQuery({
-    queryKey: ['settings'],
-    queryFn: api.settings.get,
-    staleTime: 1000 * 60 * 5,
-    retry: 2,
-  });
-
-  if (isLoading) return <PageLoader />;
+  usePageTitle();
 
   return (
-    <main className="relative">
-      <Navbar />
-      <DotNavigation />
-      <div className="animate-fadeIn">
-        <Hero />
-        <About />
-        <Resume />
-        <Skills />
-        <Portfolio />
-        <Education />
-        <Community />
-        <Testimonials />
-        <Contact />
-        <Footer />
-      </div>
-    </main>
+    <div className="animate-fadeIn">
+      <Hero />
+      <About />
+      <Resume />
+      <Skills />
+      <Portfolio />
+      <Education />
+      <Community />
+      <Testimonials />
+      <Contact />
+    </div>
   );
 };
 

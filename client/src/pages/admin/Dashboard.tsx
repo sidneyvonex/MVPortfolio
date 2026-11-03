@@ -1,5 +1,5 @@
 ﻿import { useState, useEffect } from 'react';
-import { useNavigate } from '@tanstack/react-router';
+import { useNavigate } from 'react-router';
 import type { LucideIcon } from 'lucide-react';
 import {
   Terminal, FolderOpen, Zap, Briefcase, GraduationCap,
@@ -131,13 +131,13 @@ export default function AdminDashboard() {
   useAdminHead(`${sectionTitles[active]} — Admin | CodeSidney`);
 
   useEffect(() => {
-    if (!isAuthenticated()) navigate({ to: '/admin/login' });
+    if (!isAuthenticated()) navigate('/admin/login');
   }, [navigate]);
 
   // Close mobile drawer when section changes
   const selectSection = (id: Section) => { setActive(id); setMobileOpen(false); };
 
-  const handleLogout = () => { clearToken(); navigate({ to: '/admin/login' }); };
+  const handleLogout = () => { clearToken(); navigate('/admin/login'); };
 
   const panels: Record<Section, React.ReactNode> = {
     projects:     <ProjectsPanel />,

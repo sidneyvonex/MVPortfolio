@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Link, type LinkProps } from '@tanstack/react-router';
+import { Link } from 'react-router';
 import { TileIcon } from './TileIcon';
 
 type Variant = 'primary' | 'ghost' | 'brand' | 'invert';
@@ -33,7 +33,7 @@ export const Button = ({
   disabled,
   className = '',
 }: {
-  to?: LinkProps['to'];
+  to?: string;
   href?: string;
   children: ReactNode;
   variant?: Variant;
