@@ -5,6 +5,11 @@
   "observability": {
     "enabled": true
   },
+  // The site's only public address. workers.dev and preview URLs are off so search engines never
+  // see the same pages at a second address.
+  "routes": [{ "pattern": "sidney.kodikalabs.com", "custom_domain": true }],
+  "workers_dev": false,
+  "preview_urls": false,
   "assets": {
     "directory": "dist",
     // Every page is prerendered to dist/<path>.html (served at /<path>); unknown paths get

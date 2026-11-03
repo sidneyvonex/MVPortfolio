@@ -15,6 +15,7 @@ import CommunityPanel   from '../../components/admin/CommunityPanel';
 import TestimonialsPanel from '../../components/admin/TestimonialsPanel';
 import ContactPanel     from '../../components/admin/ContactPanel';
 import SettingsPanel    from '../../components/admin/SettingsPanel';
+import PublishButton    from '../../components/admin/PublishButton';
 
 type Section = 'projects' | 'skills' | 'experience' | 'education' | 'community' | 'testimonials' | 'messages' | 'settings';
 
@@ -190,6 +191,9 @@ export default function AdminDashboard() {
           <div>
             <h1 className="text-[#0A0A0F] font-bold text-lg leading-none">{sectionTitles[active]}</h1>
             <p className="text-[#8892A4] text-xs mt-0.5">Manage your content</p>
+          </div>
+          <div className="ml-auto">
+            <PublishButton />
           </div>
         </header>
 

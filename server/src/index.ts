@@ -10,6 +10,7 @@ import { TestimonialsRouter } from './Testimonials/Testimonials.routes';
 import { ContactRouter } from './Contact/contact.routes';
 import { EducationRouter } from './Education/education.routes';
 import { CommunityRouter } from './Community/community.routes';
+import { PublishRouter } from './Publish/publish.routes';
 import openapiSpec from './openapi.json';
 
 const SWAGGER_UI_HTML = `<!DOCTYPE html>
@@ -52,5 +53,6 @@ app.route('/api', TestimonialsRouter);
 app.route('/api', ContactRouter);
 app.route('/api', EducationRouter);
 app.route('/api', CommunityRouter);
+app.route('/api', PublishRouter);
 
 export default app;

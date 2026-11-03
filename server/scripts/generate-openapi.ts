@@ -233,6 +233,10 @@ Get a token by calling \`POST /api/auth/login\`.
         '/projects/{projectId}': merge(byIdGet('Projects', 'Project', 'projectId'), update('Projects', 'ProjectBody', 'projectId'), remove('Projects', 'projectId')),
         '/projects/{projectId}/image': imageUpload('Projects', 'projectId', 'image'),
         '/projects/{projectId}/featured': { patch: { tags: ['🔐 Projects (Admin)'], summary: 'Toggle featured flag on a project', security: [bearerAuth], parameters: [{ name: 'projectId', in: 'path', required: true, schema: { type: 'integer' } }], responses: { 200: { description: 'Featured status toggled' }, 401: { description: 'Unauthorized' }, 404: { description: 'Project not found' } } } },
+        '/publish': {
+            post: { tags: ['🔐 Publish (Admin)'], summary: 'Rebuild and deploy the site (runs the deploy-site GitHub workflow)', security: [bearerAuth], responses: { 202: { description: 'Publishing started' }, 401: { description: 'Unauthorized' }, 502: { description: 'GitHub refused the request' }, 503: { description: 'GITHUB_TOKEN or GITHUB_REPO not set' } } },
+            get: { tags: ['🔐 Publish (Admin)'], summary: 'Status of the latest site deploy', security: [bearerAuth], responses: { 200: { description: '{ status, conclusion, startedAt, updatedAt, url }, or { status: "none" }' }, 401: { description: 'Unauthorized' }, 503: { description: 'GITHUB_TOKEN or GITHUB_REPO not set' } } },
+        },
         '/skills': merge(listGet('Skills', 'Skill'), create('Skills', 'SkillBody')),
         '/skills/{skillId}': merge(byIdGet('Skills', 'Skill', 'skillId'), update('Skills', 'SkillBody', 'skillId'), remove('Skills', 'skillId')),
         '/skills/{skillId}/icon': imageUpload('Skills', 'skillId', 'icon'),

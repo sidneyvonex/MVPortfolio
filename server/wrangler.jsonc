@@ -6,7 +6,8 @@
   "compatibility_flags": ["nodejs_compat"],
   "vars": {
     "CLIENT_URL": "https://sidney.kodikalabs.com,https://client.sidneygithu.workers.dev",
-    "CLOUDINARY_CLOUD_NAME": "diia0dapa"
+    "CLOUDINARY_CLOUD_NAME": "diia0dapa",
+    "GITHUB_REPO": "sidneyvonex/MVPortfolio"
   },
   "observability": {
     "enabled": true

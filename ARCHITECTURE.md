@@ -105,7 +105,7 @@ There is no placeholder content: a section renders only when its collection has 
 4. Embeds the data it rendered with in `<script type="application/json" id="initial-data">`. The browser seeds TanStack Query from it, hydrates the HTML, and refetches each collection in the background, so edits made after the build still appear.
 5. Writes `404.html` (served with a 404 status for unknown paths), empty `noindex` shells for the admin, `sitemap.xml`, `robots.txt` (admin disallowed) and `llms.txt`.
 
-Content edited in the admin panel shows to visitors immediately, but search engines and link previews only see it after the next build and deploy.
+Content edited in the admin panel shows to visitors immediately, but search engines and link previews only see it after the next build and deploy. The admin's **Publish site** button starts that: it calls `POST /api/publish`, the API sends a `publish-site` repository_dispatch to GitHub with its `GITHUB_TOKEN`, and `.github/workflows/deploy-site.yml` builds and deploys the site. The button then polls `GET /api/publish` for the run's status.
 
 ---
 
@@ -286,6 +286,13 @@ All routes are prefixed with `/api`. Protected routes require `Authorization: Be
 | GET | `/contact/:id` | Protected | Single message |
 | DELETE | `/contact/:id` | Protected | Delete message |
 | PATCH | `/contact/:id/read` | Protected | Mark message as read |
+
+### Publish
+
+| Method | Path | Access | Description |
+|--------|------|--------|-------------|
+| POST | `/publish` | Protected | Start the deploy-site workflow (rebuild and deploy the site) |
+| GET | `/publish` | Protected | Status of the latest deploy run |
 
 ### Community
 

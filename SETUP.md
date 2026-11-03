@@ -178,6 +178,18 @@ cd client
 pnpm run deploy
 ```
 
+The site is served only at `sidney.kodikalabs.com` (set in `client/wrangler.jsonc`; the workers.dev address is off).
+
+**Automatic deploys and the Publish button:** `.github/workflows/deploy-site.yml` builds and deploys the site on every push to `main` that touches `client/`, from the Actions tab (**Run workflow**), and when **Publish site** is pressed in the admin. It needs:
+
+| Where | Name | Value |
+|-------|------|-------|
+| GitHub → repo → Settings → Secrets → Actions | `CLOUDFLARE_API_TOKEN` | Cloudflare API token from the **Edit Cloudflare Workers** template |
+| GitHub → repo → Settings → Secrets → Actions | `CLOUDFLARE_ACCOUNT_ID` | Your Cloudflare account ID |
+| API Worker secret (`npx wrangler secret put GITHUB_TOKEN` in `server/`) | `GITHUB_TOKEN` | Fine-grained GitHub token for this repo only: **Contents** read and write, **Actions** read |
+
+`GITHUB_REPO` (the `owner/name` the button targets) is a plain var in `server/wrangler.jsonc`.
+
 Both run comfortably on Cloudflare's free plan for a personal portfolio's traffic — see the CPU-time note in the environment variable reference below.
 
 ---

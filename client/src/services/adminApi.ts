@@ -164,3 +164,18 @@ export const settingsApi = {
     return { resumeUrl: res.resumeUrl ?? res.url ?? '' };
   },
 };
+
+// ── Publish ───────────────────────────────────────────────────────────────────
+
+export interface PublishStatus {
+  status: 'none' | 'queued' | 'in_progress' | 'completed' | 'waiting' | 'requested' | 'pending';
+  conclusion?: 'success' | 'failure' | 'cancelled' | 'skipped' | 'timed_out' | null;
+  startedAt?: string;
+  updatedAt?: string;
+  url?: string;
+}
+
+export const publishApi = {
+  start:  () => aPost('/publish', {}) as Promise<{ message: string }>,
+  status: () => aGet('/publish')      as Promise<PublishStatus>,
+};
