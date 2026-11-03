@@ -19,11 +19,17 @@ export interface NavItem {
   to: string;
 }
 
-/** Top navigation, left to right. Services and FAQ join once their pages exist. */
+/** Top navigation, left to right. */
 export const MAIN_MENU: NavItem[] = [
+  { label: 'Services', to: '/services' },
   { label: 'Work', to: '/work' },
   { label: 'About', to: '/about' },
   { label: 'Contact', to: '/contact' },
 ];
 
-export const FOOTER_PAGES: NavItem[] = [{ label: 'Home', to: '/' }, ...MAIN_MENU];
+export const FOOTER_PAGES: NavItem[] = [
+  { label: 'Home', to: '/' },
+  ...MAIN_MENU,
+  { label: 'FAQ', to: '/faq' },
+  { label: 'Privacy', to: '/privacy' },
+];

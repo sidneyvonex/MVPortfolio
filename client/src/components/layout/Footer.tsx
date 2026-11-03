@@ -1,4 +1,5 @@
 import { Link } from 'react-router';
+import { SERVICE_GROUPS, servicesIn, type ServiceGroup } from '../../data/services';
 import { FOOTER_PAGES, SITE } from '../../data/site';
 import { useSettings } from '../../hooks/useSettings';
 import { Button } from '../ui/Button';
@@ -48,7 +49,7 @@ export const Footer = () => {
   return (
     <footer className="border-t border-line bg-surface text-fg">
       <Container className="grid gap-14 pt-16 pb-10 md:pt-20">
-        <div className="grid gap-12 lg:grid-cols-[minmax(0,1.6fr)_repeat(2,minmax(0,1fr))] lg:gap-10">
+        <div className="grid gap-12 lg:grid-cols-[minmax(0,1.4fr)_repeat(4,minmax(0,1fr))] lg:gap-10">
           <div className="grid content-start gap-5">
             <Wordmark className="justify-self-start" />
             <p className="max-w-[38ch] text-fg-soft">{SITE.description}</p>
@@ -63,7 +64,21 @@ export const Footer = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-10 lg:col-span-2">
+          <div className="grid grid-cols-2 gap-10 sm:grid-cols-4 lg:col-span-4">
+            {(['build', 'collaborate'] as ServiceGroup[]).map((group) => (
+              <nav key={group} aria-label={SERVICE_GROUPS[group].label} className="grid content-start gap-4">
+                <span className={colTitle}>{SERVICE_GROUPS[group].label}</span>
+                <ul className="grid gap-2.5 text-[0.9375rem]">
+                  {servicesIn(group).map((s) => (
+                    <li key={s.slug}>
+                      <Link to={`/services/${s.slug}`} className="transition-colors hover:text-accent">
+                        {s.title}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </nav>
+            ))}
             <nav aria-label="Pages" className="grid content-start gap-4">
               <span className={colTitle}>Pages</span>
               <ul className="grid gap-2.5 text-[0.9375rem]">
