@@ -7,7 +7,7 @@ This document covers everything needed to run the portfolio project locally, fro
 | Tool | Minimum Version | Notes |
 |------|----------------|-------|
 | Node.js | 20 | LTS recommended |
-| npm | 10+ | Used in both workspaces |
+| pnpm | 12+ | Used in both workspaces |
 | Git | any | |
 
 An account on the following external services is required:
@@ -33,11 +33,11 @@ Both workspaces have separate `package.json` files. Install them independently.
 ```bash
 # Server
 cd server
-npm install
+pnpm install
 
 # Client
 cd ../client
-npm install
+pnpm install
 ```
 
 ---
@@ -100,7 +100,7 @@ Drizzle manages the schema. Apply all migrations to your Neon database:
 
 ```bash
 cd server
-npm run migrate
+pnpm run migrate
 ```
 
 This reads `drizzle.config.ts` and runs the SQL files in `src/drizzle/migrations/` against your `DATABASE_URL`.
@@ -113,7 +113,7 @@ A seed script inserts placeholder projects, skills, experience, education, testi
 
 ```bash
 cd server
-npm run seed
+pnpm run seed
 ```
 
 Run this only once. If the database already has data the script may insert duplicates.
@@ -126,7 +126,7 @@ The admin panel is protected by a JWT. An admin account must be created before y
 
 ```bash
 cd server
-npm run create-admin you@example.com YourSecurePassword123
+pnpm run create-admin you@example.com YourSecurePassword123
 ```
 
 - If the email already exists the password is updated instead.
@@ -142,13 +142,13 @@ Open two terminal windows or tabs.
 **Terminal 1 — API Worker** (runs on port 8787 via `wrangler dev`):
 ```bash
 cd server
-npm run dev
+pnpm run dev
 ```
 
 **Terminal 2 — Vite dev server** (runs on port 5173):
 ```bash
 cd client
-npm run dev
+pnpm run dev
 ```
 
 Then open:
@@ -171,14 +171,14 @@ npx wrangler secret put JWT_SECRET
 npx wrangler secret put CLOUDINARY_API_KEY
 npx wrangler secret put CLOUDINARY_API_SECRET
 # edit CLIENT_URL and CLOUDINARY_CLOUD_NAME in wrangler.jsonc first, then:
-npm run deploy
+pnpm run deploy
 ```
 
 **Client (Cloudflare Pages):**
 ```bash
 cd client
 # set VITE_API_URL to your deployed Worker's URL first
-npm run deploy
+pnpm run deploy
 ```
 
 Both run comfortably on Cloudflare's free plan for a personal portfolio's traffic — see the CPU-time note in the environment variable reference below.

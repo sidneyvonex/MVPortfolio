@@ -1,6 +1,7 @@
 {
   "name": "server",
   "version": "1.0.0",
+  "packageManager": "pnpm@12.6.0",
   "description": "",
   "main": "src/index.ts",
   "scripts": {
