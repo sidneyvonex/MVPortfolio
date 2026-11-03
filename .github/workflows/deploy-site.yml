@@ -1,13 +1,14 @@
 # Builds the site (prerendering every page from the live API) and deploys it to the `client` Worker.
-# Runs on pushes to main that touch client/, by hand from the Actions tab, and when the admin's
-# "Publish site" button sends a `publish-site` repository_dispatch through the API.
+# Runs on pushes to main or workers that touch client/, by hand from the Actions tab, and when the
+# admin's "Publish site" button sends a `publish-site` repository_dispatch through the API.
+# GitHub runs manual and dispatch triggers from the repository's default branch only.
 #
 # Repository secrets: CLOUDFLARE_API_TOKEN (Workers Scripts: Edit) and CLOUDFLARE_ACCOUNT_ID.
 name: Deploy site
 
 on:
   push:
-    branches: [main]
+    branches: [main, workers]
     paths: ['client/**', '.github/workflows/deploy-site.yml']
   workflow_dispatch:
   repository_dispatch:
