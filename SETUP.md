@@ -83,7 +83,7 @@ cd client
 API_PROXY=https://mvportfolio-api.sidneygithu.workers.dev pnpm run dev
 ```
 
-Production builds read `VITE_API_URL` from the committed `client/.env.production`: the API Worker's absolute URL, including `/api`.
+Production builds read `client/.env.production`: `VITE_API_URL=/api` (the site's Worker forwards `/api/*` and `/resume.pdf` to the API Worker over a service binding) and `PRERENDER_API_URL`, the API's absolute address used by the build-time prerender.
 
 > **Important:** Do not set `VITE_API_URL` as a system/shell environment variable. A shell-level value overrides the `.env` files and makes the dev server skip the proxy.
 
@@ -174,7 +174,7 @@ pnpm run deploy
 **Site (`client` Worker):**
 ```bash
 cd client
-# VITE_API_URL in .env.production must point at the deployed API Worker
+# PRERENDER_API_URL in .env.production must point at the deployed API Worker
 pnpm run deploy
 ```
 
@@ -218,7 +218,8 @@ Both run comfortably on Cloudflare's free plan for a personal portfolio's traffi
 
 | Variable | Where | Description |
 |----------|-------|-------------|
-| `VITE_API_URL` | `client/.env.production` | API base URL including `/api`, used by production builds. Leave unset in development. |
+| `VITE_API_URL` | `client/.env.production` | `/api`: the browser calls the API through the site's Worker. Leave unset in development. |
+| `PRERENDER_API_URL` | `client/.env.production` | The API's absolute URL including `/api`, fetched by the build-time prerender. |
 | `API_PROXY` | Shell, dev only | Where the dev server sends `/api` calls. Defaults to `http://localhost:8787`. |
 
 ---

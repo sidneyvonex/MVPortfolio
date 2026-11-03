@@ -12,6 +12,12 @@ export default defineConfig({
         target: process.env.API_PROXY || 'http://localhost:8787',
         changeOrigin: true,
       },
+      // Same as worker/index.ts in production.
+      '/resume.pdf': {
+        target: process.env.API_PROXY || 'http://localhost:8787',
+        changeOrigin: true,
+        rewrite: () => '/api/settings/resume/download',
+      },
     },
   },
 })

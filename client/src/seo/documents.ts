@@ -260,6 +260,7 @@ ${pages.map((p) => `  <url><loc>${urlFor(p.path)}</loc><lastmod>${lastmod}</last
 export const robots = () => `User-agent: *
 Allow: /
 Disallow: /admin
+Disallow: /api/
 
 Sitemap: ${SITE.url}/sitemap.xml
 `;

@@ -1,6 +1,7 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "client",
+  "main": "worker/index.ts",
   "compatibility_date": "2026-09-11",
   "observability": {
     "enabled": true
@@ -10,8 +11,13 @@
   "routes": [{ "pattern": "sidney.kodikalabs.com", "custom_domain": true }],
   "workers_dev": false,
   "preview_urls": false,
+  // The API Worker, reached from worker/index.ts for /api/* and /resume.pdf.
+  "services": [{ "binding": "API", "service": "mvportfolio-api" }],
   "assets": {
     "directory": "dist",
+    "binding": "ASSETS",
+    // Only these paths run worker/index.ts; everything else is served from dist/ directly.
+    "run_worker_first": ["/api/*", "/resume.pdf"],
     // Every page is prerendered to dist/<path>.html (served at /<path>); unknown paths get
     // dist/404.html with a real 404 status, so search engines never index a wrong address.
     "html_handling": "auto-trailing-slash",

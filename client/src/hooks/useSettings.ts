@@ -3,7 +3,6 @@ import { api } from '../services/api';
 import type { SettingsMap } from '../services/adminApi';
 import { SITE } from '../data/site';
 
-const BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
 /** Site settings from the admin dashboard, plus the links the page frame needs, with fallbacks. */
 export const useSettings = () => {
@@ -19,7 +18,8 @@ export const useSettings = () => {
     settings,
     isLoading,
     email,
-    resumeHref: settings?.resumeUrl ? `${BASE_URL}/settings/resume/download` : null,
+    // Served by the site's Worker (worker/index.ts), or the dev server's proxy, from the API.
+    resumeHref: settings?.resumeUrl ? '/resume.pdf' : null,
     socials: [
       { label: 'GitHub', href: settings?.githubUrl },
       { label: 'LinkedIn', href: settings?.linkedinUrl },

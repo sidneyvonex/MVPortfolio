@@ -64,7 +64,7 @@ src/
 
 ## Environment
 
-`.env.production` sets `VITE_API_URL` to the API Worker's absolute URL for production builds. In development `VITE_API_URL` is unset, calls go to `/api`, and Vite proxies them:
+In production the browser calls `/api` on the site's own domain: `worker/index.ts` forwards `/api/*` and `/resume.pdf` to the API Worker over a service binding. `.env.production` sets `VITE_API_URL=/api`, and `PRERENDER_API_URL` (absolute) for the build-time prerender. In development `VITE_API_URL` is unset, calls go to `/api`, and Vite proxies them:
 
 ```bash
 pnpm dev                                                            # proxies to a local API on :8787

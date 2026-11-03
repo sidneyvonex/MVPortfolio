@@ -17,7 +17,8 @@ browser
   |
   |-- API calls
   |        dev:  /api/*  -> Vite proxy -> local API on :8787, or the live API with API_PROXY
-  |        prod: VITE_API_URL (the API Worker's URL), allowed by CORS
+  |        prod: /api/* on sidney.kodikalabs.com -> the site's Worker (client/worker/index.ts)
+  |              -> service binding to the API Worker (same domain, no CORS); /resume.pdf likewise
   |                    |
   |           Hono app on the `mvportfolio-api` Worker
   |                    |
@@ -99,7 +100,7 @@ There is no placeholder content: a section renders only when its collection has 
 
 `pnpm build` in `client/` ends by running `scripts/prerender.mjs`, which:
 
-1. Fetches every collection from the live API (`VITE_API_URL` in `.env.production`). A failed fetch stops the build, so a deploy never ships pages without content.
+1. Fetches every collection from the live API (`PRERENDER_API_URL` in `.env.production`, the API's absolute address). A failed fetch stops the build, so a deploy never ships pages without content.
 2. Renders each public page to HTML with `src/entry-server.tsx` and writes it to `dist/<path>.html`: the home page, services, the eight service pages, work, one page per project, about, contact, FAQ and privacy.
 3. Gives each page its own `<title>`, description, canonical URL, Open Graph and Twitter tags, and JSON-LD (`Person` on every page, plus `WebSite`/`ProfilePage`, `Service`, `CreativeWork`, `FAQPage`, `ContactPage` and `BreadcrumbList` where they apply). All of it comes from `src/seo/documents.ts`.
 4. Embeds the data it rendered with in `<script type="application/json" id="initial-data">`. The browser seeds TanStack Query from it, hydrates the HTML, and refetches each collection in the background, so edits made after the build still appear.

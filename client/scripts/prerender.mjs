@@ -7,7 +7,8 @@
 // (dist-ssr/). Files are written as dist/<path>.html: the Worker's static assets serve them at
 // /<path>, and 404.html becomes the answer, with a 404 status, for unknown paths.
 //
-// API address: PRERENDER_API_URL, else VITE_API_URL from .env.production.
+// API address: the PRERENDER_API_URL environment variable, else PRERENDER_API_URL in .env.production
+// (absolute: this runs in Node, where the site's /api path does not exist).
 import { execSync } from 'node:child_process'
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
@@ -20,8 +21,8 @@ const SERVER = join(ROOT, 'dist-ssr')
 const apiBase = () => {
   if (process.env.PRERENDER_API_URL) return process.env.PRERENDER_API_URL
   const env = readFileSync(join(ROOT, '.env.production'), 'utf8')
-  const match = /^VITE_API_URL=(.+)$/m.exec(env)
-  if (!match) throw new Error('No API address: set PRERENDER_API_URL or VITE_API_URL in .env.production')
+  const match = /^PRERENDER_API_URL=(https?:\/\/.+)$/m.exec(env)
+  if (!match) throw new Error('No API address: set PRERENDER_API_URL (absolute) in .env.production')
   return match[1].trim()
 }
 
