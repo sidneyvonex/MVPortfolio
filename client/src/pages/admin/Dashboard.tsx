@@ -59,7 +59,7 @@ const SidebarContent = ({ mobile = false, collapsed, active, onCollapse, onClose
       </div>
       {(!collapsed || mobile) && (
         <div className="flex-1 min-w-0">
-          <p className="text-[#0A0A0F] font-bold text-sm leading-none truncate tracking-tight">CodeSidney</p>
+          <p className="text-[#0A0A0F] font-bold text-sm leading-none truncate tracking-tight">Bensidney Ndungu</p>
           <p className="text-[#8892A4] text-[11px] mt-0.5">Admin Panel</p>
         </div>
       )}
@@ -128,7 +128,7 @@ export default function AdminDashboard() {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  useAdminHead(`${sectionTitles[active]} — Admin | CodeSidney`);
+  useAdminHead(`${sectionTitles[active]} — Admin | Bensidney Ndungu`);
 
   useEffect(() => {
     if (!isAuthenticated()) navigate('/admin/login');

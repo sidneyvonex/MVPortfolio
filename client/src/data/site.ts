@@ -2,8 +2,8 @@
 // from the API through the admin dashboard; this file holds what the page frame needs up front.
 
 export const SITE = {
-  name: 'Bensidney Githu',
-  fullName: "Bensidney Githu Ndung'u",
+  name: 'Bensidney Ndungu',
+  fullName: 'Bensidney Ndungu',
   role: 'Full stack developer',
   location: 'Kenya',
   /** Canonical address: used for the sitemap, link previews and structured data. */

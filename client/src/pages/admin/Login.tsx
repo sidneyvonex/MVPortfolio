@@ -13,7 +13,7 @@ const AdminLogin = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  useAdminHead('Admin Login — CodeSidney');
+  useAdminHead('Admin Login — Bensidney Ndungu');
 
   useEffect(() => {
     if (isAuthenticated()) navigate('/admin/dashboard');
@@ -73,7 +73,7 @@ const AdminLogin = () => {
         </div>
 
         <p className="font-body text-white/30 text-xs">
-          © {new Date().getFullYear()} CodeSidney Portfolio
+          © {new Date().getFullYear()} Bensidney Ndungu
         </p>
       </div>
 
